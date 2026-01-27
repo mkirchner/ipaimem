@@ -592,6 +592,19 @@
                         </select>
                     </div>
                 </div>
+
+                <div class="config-item">
+                    <div class="config-details">
+                        <h3>Your Name</h3>
+                        <p>
+                            Add the name you'd like printed on test certificates. This is stored locally
+                            and can be updated anytime.
+                        </p>
+                    </div>
+                    <div class="config-control">
+                        <input type="text" id="user-name" placeholder="Enter your name">
+                    </div>
+                </div>
             </div>
 
             <button class="btn" onclick="saveConfig()">Save Configuration</button>
@@ -672,11 +685,6 @@
         <!-- Test Section -->
         <div id="test-section" class="section">
             <h2>Test</h2>
-
-            <div class="form-group">
-                <label for="test-user-name">Your Name</label>
-                <input type="text" id="test-user-name" placeholder="Enter your name for the certificate">
-            </div>
 
             <div id="start-test">
                 <button class="btn" onclick="startGame('test')">Start Test</button>
@@ -885,7 +893,7 @@
             });
 
             updateConfigUI();
-            updateTestNameUI();
+            updateUserNameUI();
         }
 
         // Save data to cookies
@@ -898,11 +906,15 @@
         function updateConfigUI() {
             document.getElementById('batch-size').value = config.batchSize;
             document.getElementById('game-type').value = config.gameType;
+            const nameInput = document.getElementById('user-name');
+            if (nameInput) {
+                nameInput.value = config.userName || '';
+            }
             updateCurrentConfigDisplay();
         }
 
-        function updateTestNameUI() {
-            const input = document.getElementById('test-user-name');
+        function updateUserNameUI() {
+            const input = document.getElementById('user-name');
             if (input) {
                 input.value = config.userName || '';
             }
@@ -930,6 +942,7 @@
         function saveConfig() {
             config.batchSize = Math.min(70, Math.max(5, parseInt(document.getElementById('batch-size').value) || 20));
             config.gameType = document.getElementById('game-type').value;
+            config.userName = document.getElementById('user-name').value.trim();
             saveData();
             updateConfigUI();
             alert('Configuration saved!');
@@ -1070,17 +1083,16 @@
             const originalIds = new Set(batch.map(e => e.id));
 
             if (isTest) {
-                const nameInput = document.getElementById('test-user-name');
-                const nameValue = nameInput ? nameInput.value.trim() : '';
+                const nameValue = (config.userName || '').trim();
                 if (!nameValue) {
-                    alert('Please enter your name before starting the test.');
+                    alert('Please add your name in Configuration before starting the test.');
+                    showSection('config');
+                    const nameInput = document.getElementById('user-name');
                     if (nameInput) {
                         nameInput.focus();
                     }
                     return;
                 }
-                config.userName = nameValue;
-                saveData();
             }
 
             gameState = {
