@@ -398,6 +398,11 @@
             color: #4a9c5d;
         }
 
+        .certificate-btn {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
         /* Game History */
         .game-history-item {
             background-color: white;
@@ -608,57 +613,78 @@
             <h2>Train</h2>
 
             <div id="start-game">
-                <button class="btn" onclick="startGame()">Start Training</button>
+                <button class="btn" onclick="startGame('train')">Start Training</button>
             </div>
 
-            <div id="game-container" class="game-container">
-                <div class="progress-text" id="progress-text">Card 1 of 20</div>
-                <div class="progress-bar">
-                    <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+            <div id="train-game-host">
+                <div id="shared-game-ui">
+                    <div id="game-container" class="game-container">
+                        <div class="progress-text" id="progress-text">Card 1 of 20</div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+                        </div>
+                        <button id="cancel-training" class="btn btn-secondary" onclick="cancelGame()" style="margin-bottom: 20px; display: none;">
+                            Cancel Training
+                        </button>
+
+                        <div class="card">
+                            <img id="card-image" class="card-image" src="" alt="Employee photo">
+
+                            <!-- Multiple Choice Mode -->
+                            <div id="multiple-choice-mode" class="choices">
+                                <!-- Filled by JS -->
+                            </div>
+
+                            <!-- Typing Mode -->
+                            <div id="typing-mode" class="input-container" style="display: none;">
+                                <input type="text" id="name-input" class="typing-input" placeholder="Type the name..." autocomplete="off">
+                                <p class="input-hint">Press Enter to submit</p>
+                                <div id="typing-feedback" class="typing-feedback" style="display: none;"></div>
+                            </div>
+
+                            <div id="result" class="result" style="display: none;">
+                                <!-- Filled by JS -->
+                            </div>
+
+                            <button id="continue-btn" class="btn continue-btn" style="display: none;" onclick="nextCard()">Continue (Enter)</button>
+                        </div>
+                    </div>
+
+                    <div id="batch-complete" class="batch-complete">
+                        <h3 id="completion-title">Training Complete!</h3>
+                        <div class="batch-stats">
+                            <div class="batch-stat">
+                                <div class="batch-stat-value" id="final-score">0%</div>
+                                <div class="batch-stat-label">Success Rate</div>
+                            </div>
+                            <div class="batch-stat">
+                                <div class="batch-stat-value" id="final-correct">0/0</div>
+                                <div class="batch-stat-label">Completion</div>
+                            </div>
+                        </div>
+                        <button class="btn" id="restart-btn" onclick="restartGame()">Train Again</button>
+                        <button class="btn btn-secondary" onclick="showSection('stats')">View Statistics</button>
+                    </div>
                 </div>
-                <button id="cancel-training" class="btn btn-secondary" onclick="cancelTraining()" style="margin-bottom: 20px; display: none;">
-                    Cancel Training
-                </button>
-
-                <div class="card">
-                    <img id="card-image" class="card-image" src="" alt="Employee photo">
-
-                    <!-- Multiple Choice Mode -->
-                    <div id="multiple-choice-mode" class="choices">
-                        <!-- Filled by JS -->
-                    </div>
-
-                    <!-- Typing Mode -->
-                    <div id="typing-mode" class="input-container" style="display: none;">
-                        <input type="text" id="name-input" class="typing-input" placeholder="Type the name..." autocomplete="off">
-                        <p class="input-hint">Press Enter to submit</p>
-                        <div id="typing-feedback" class="typing-feedback" style="display: none;"></div>
-                    </div>
-
-                    <div id="result" class="result" style="display: none;">
-                        <!-- Filled by JS -->
-                    </div>
-
-                    <button id="continue-btn" class="btn continue-btn" style="display: none;" onclick="nextCard()">Continue (Enter)</button>
-                </div>
-            </div>
-
-            <div id="batch-complete" class="batch-complete">
-                <h3>Training Complete!</h3>
-                <div class="batch-stats">
-                    <div class="batch-stat">
-                        <div class="batch-stat-value" id="final-score">0%</div>
-                        <div class="batch-stat-label">Success Rate</div>
-                    </div>
-                    <div class="batch-stat">
-                        <div class="batch-stat-value" id="final-correct">0/0</div>
-                        <div class="batch-stat-label">Completion</div>
-                    </div>
-                </div>
-                <button class="btn" onclick="startGame()">Train Again</button>
-                <button class="btn btn-secondary" onclick="showSection('stats')">View Statistics</button>
             </div>
         </div>
+
+        <!-- Test Section -->
+        <div id="test-section" class="section">
+            <h2>Test</h2>
+
+            <div class="form-group">
+                <label for="test-user-name">Your Name</label>
+                <input type="text" id="test-user-name" placeholder="Enter your name for the certificate">
+            </div>
+
+            <div id="start-test">
+                <button class="btn" onclick="startGame('test')">Start Test</button>
+            </div>
+
+            <div id="test-game-host"></div>
+        </div>
+
 
         <!-- Statistics Section -->
         <div id="stats-section" class="section">
@@ -670,8 +696,15 @@
             </div>
 
             <div class="stats-card">
-                <h3>Game History</h3>
+                <h3>Training History</h3>
                 <div id="game-history">
+                    <!-- Filled by JS -->
+                </div>
+            </div>
+
+            <div class="stats-card">
+                <h3>Test History</h3>
+                <div id="test-history">
                     <!-- Filled by JS -->
                 </div>
             </div>
@@ -769,23 +802,28 @@
         // State
         let config = {
             batchSize: 20,
-            gameType: 'multiple-choice'
+            gameType: 'multiple-choice',
+            userName: ''
         };
 
         let gameState = {
             active: false,
+            mode: 'train',
             queue: [],                    // Queue of employees to ask (grows when wrong)
             originalBatchIds: new Set(),  // IDs of original batch employees
             correctlyAnsweredIds: new Set(), // IDs correctly answered at least once
             currentEmployee: null,        // Current employee being shown
             totalAttempts: 0,            // Total questions asked
             correct: 0,                  // Correct answers on first attempt
+            totalCount: 0,
+            incorrectIds: [],
             results: [],
             answered: false
         };
 
         let stats = {
             games: [],
+            tests: [],
             employeeStats: {}
         };
 
@@ -824,6 +862,15 @@
             if (savedStats) {
                 stats = savedStats;
             }
+            if (!stats.tests) {
+                stats.tests = [];
+            }
+            if (!stats.games) {
+                stats.games = [];
+            }
+            if (!stats.employeeStats) {
+                stats.employeeStats = {};
+            }
 
             // Initialize employee stats for all employees
             EMPLOYEES.forEach(emp => {
@@ -838,6 +885,7 @@
             });
 
             updateConfigUI();
+            updateTestNameUI();
         }
 
         // Save data to cookies
@@ -851,6 +899,13 @@
             document.getElementById('batch-size').value = config.batchSize;
             document.getElementById('game-type').value = config.gameType;
             updateCurrentConfigDisplay();
+        }
+
+        function updateTestNameUI() {
+            const input = document.getElementById('test-user-name');
+            if (input) {
+                input.value = config.userName || '';
+            }
         }
 
         function updateCurrentConfigDisplay() {
@@ -885,8 +940,8 @@
             if (confirm('Are you sure you want to reset all game data? This cannot be undone.')) {
                 deleteCookie('ipai_config');
                 deleteCookie('ipai_stats');
-                stats = { games: [], employeeStats: {} };
-                config = { batchSize: 20, gameType: 'multiple-choice' };
+                stats = { games: [], tests: [], employeeStats: {} };
+                config = { batchSize: 20, gameType: 'multiple-choice', userName: '' };
                 loadData();
                 updateStatsUI();
                 alert('All data has been reset.');
@@ -895,24 +950,17 @@
 
         // Navigation
         function showSection(section) {
-            const wasTrainActive = document.getElementById('train-section').classList.contains('active');
-
             document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
             document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
 
-            const targetSection = section === 'test' ? 'train' : section;
-            document.getElementById(targetSection + '-section').classList.add('active');
+            document.getElementById(section + '-section').classList.add('active');
             document.getElementById('nav-' + section).classList.add('active');
-
-            if (wasTrainActive && !gameState.active) {
-                resetTrainingUI();
-            }
 
             if (section === 'stats') {
                 updateStatsUI();
             }
             if (section === 'train' || section === 'test') {
-                updateTrainingView();
+                updateGameView(section);
             }
         }
 
@@ -977,25 +1025,83 @@
             return prioritized.slice(0, size).map(p => p.employee);
         }
 
+        function shuffleArray(items) {
+            const array = [...items];
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function attachSharedGameUI(mode) {
+            const shared = document.getElementById('shared-game-ui');
+            const host = document.getElementById(`${mode}-game-host`);
+            if (shared && host && shared.parentElement !== host) {
+                host.appendChild(shared);
+            }
+        }
+
+        function setModeLabels(mode) {
+            const cancelButton = document.getElementById('cancel-training');
+            const completionTitle = document.getElementById('completion-title');
+            const restartBtn = document.getElementById('restart-btn');
+
+            if (mode === 'test') {
+                cancelButton.textContent = 'Cancel Test';
+                completionTitle.textContent = 'Test Complete!';
+                restartBtn.textContent = 'Take Test Again';
+            } else {
+                cancelButton.textContent = 'Cancel Training';
+                completionTitle.textContent = 'Training Complete!';
+                restartBtn.textContent = 'Train Again';
+            }
+        }
+
+        function restartGame() {
+            startGame(gameState.mode || 'train');
+        }
+
         // Game Logic
-        function startGame() {
-            statsBeforeGame = JSON.parse(JSON.stringify(stats));
-            const batch = selectBatch(config.batchSize);
+        function startGame(mode) {
+            const isTest = mode === 'test';
+            statsBeforeGame = isTest ? null : JSON.parse(JSON.stringify(stats));
+            const batch = isTest ? shuffleArray([...EMPLOYEES]) : selectBatch(config.batchSize);
             const originalIds = new Set(batch.map(e => e.id));
+
+            if (isTest) {
+                const nameInput = document.getElementById('test-user-name');
+                const nameValue = nameInput ? nameInput.value.trim() : '';
+                if (!nameValue) {
+                    alert('Please enter your name before starting the test.');
+                    if (nameInput) {
+                        nameInput.focus();
+                    }
+                    return;
+                }
+                config.userName = nameValue;
+                saveData();
+            }
 
             gameState = {
                 active: true,
+                mode: mode,
                 queue: [...batch],           // Copy of batch as queue
                 originalBatchIds: originalIds,
                 correctlyAnsweredIds: new Set(),
                 currentEmployee: null,
                 totalAttempts: 0,
                 correct: 0,
+                totalCount: batch.length,
+                incorrectIds: [],
                 results: [],
                 answered: false
             };
 
-            document.getElementById('start-game').style.display = 'none';
+            setModeLabels(mode);
+            attachSharedGameUI(mode);
+
+            document.getElementById(mode === 'test' ? 'start-test' : 'start-game').style.display = 'none';
             document.getElementById('game-container').classList.add('active');
             document.getElementById('batch-complete').classList.remove('active');
             document.getElementById('cancel-training').style.display = 'inline-block';
@@ -1009,13 +1115,14 @@
             gameState.currentEmployee = emp;
             gameState.answered = false;
 
-            // Update progress (based on how many correctly answered vs original batch)
-            const completed = gameState.correctlyAnsweredIds.size;
-            const total = gameState.originalBatchIds.size;
-            const progress = (completed / total) * 100;
+            // Update progress
+            const total = gameState.totalCount;
+            const completed = gameState.mode === 'test' ? gameState.totalAttempts : gameState.correctlyAnsweredIds.size;
+            const progress = total === 0 ? 0 : (completed / total) * 100;
             document.getElementById('progress-fill').style.width = progress + '%';
-            document.getElementById('progress-text').textContent =
-                `${completed} of ${total} learned (${gameState.queue.length + 1} remaining)`;
+            document.getElementById('progress-text').textContent = gameState.mode === 'test'
+                ? `Question ${completed + 1} of ${total}`
+                : `${completed} of ${total} learned (${gameState.queue.length + 1} remaining)`;
 
             // Show image
             document.getElementById('card-image').src = emp.image;
@@ -1074,15 +1181,18 @@
 
             const emp = gameState.currentEmployee;
             const isCorrect = chosenId === emp.id;
+            const isTest = gameState.mode === 'test';
 
             // Update button styles
             document.querySelectorAll('.choice-btn').forEach(btn => {
                 btn.disabled = true;
                 const btnId = parseInt(btn.dataset.id);
-                if (btnId === emp.id) {
-                    btn.classList.add('correct');
-                } else if (btnId === chosenId && !isCorrect) {
-                    btn.classList.add('incorrect');
+                if (!isTest) {
+                    if (btnId === emp.id) {
+                        btn.classList.add('correct');
+                    } else if (btnId === chosenId && !isCorrect) {
+                        btn.classList.add('incorrect');
+                    }
                 }
             });
 
@@ -1101,6 +1211,7 @@
             input.disabled = true;
 
             const emp = gameState.currentEmployee;
+            const isTest = gameState.mode === 'test';
             const firstName = emp.firstName.toLowerCase();
             const lastName = emp.lastName.toLowerCase();
             const fullName = emp.fullName.toLowerCase();
@@ -1111,48 +1222,59 @@
                               answer === firstName ||
                               answer === lastName;
 
-            // Show feedback with name
-            const feedback = document.getElementById('typing-feedback');
-            feedback.style.display = 'block';
-            feedback.className = 'typing-feedback ' + (isCorrect ? 'correct' : 'incorrect');
-            feedback.textContent = emp.fullName;
+            if (!isTest) {
+                // Show feedback with name
+                const feedback = document.getElementById('typing-feedback');
+                feedback.style.display = 'block';
+                feedback.className = 'typing-feedback ' + (isCorrect ? 'correct' : 'incorrect');
+                feedback.textContent = emp.fullName;
+            }
 
             recordAnswer(emp, isCorrect);
         }
 
         function recordAnswer(emp, isCorrect) {
             gameState.totalAttempts++;
+            const isTraining = gameState.mode === 'train';
 
-            // Track correct answers on first attempt only
+            // Track correct answers on first attempt only (training)
             const isFirstAttempt = !gameState.correctlyAnsweredIds.has(emp.id);
 
-            if (isCorrect) {
-                // Mark as correctly answered
-                gameState.correctlyAnsweredIds.add(emp.id);
-                if (isFirstAttempt) {
-                    gameState.correct++;
+            if (isTraining) {
+                if (isCorrect) {
+                    // Mark as correctly answered
+                    gameState.correctlyAnsweredIds.add(emp.id);
+                    if (isFirstAttempt) {
+                        gameState.correct++;
+                    }
+                } else {
+                    // Re-add to queue for another attempt
+                    gameState.queue.push(emp);
                 }
-            } else {
-                // Re-add to queue for another attempt
-                gameState.queue.push(emp);
-            }
 
-            gameState.results.push({
-                employeeId: emp.id,
-                correct: isCorrect,
-                firstAttempt: isFirstAttempt
-            });
+                gameState.results.push({
+                    employeeId: emp.id,
+                    correct: isCorrect,
+                    firstAttempt: isFirstAttempt
+                });
 
-            // Update employee stats (track all attempts)
-            const empStats = stats.employeeStats[emp.id];
-            if (isCorrect) {
-                empStats.correct++;
+                // Update employee stats (track all attempts)
+                const empStats = stats.employeeStats[emp.id];
+                if (isCorrect) {
+                    empStats.correct++;
+                } else {
+                    empStats.incorrect++;
+                }
+                empStats.lastSeen = Date.now();
+                empStats.lastResult = isCorrect;
+                saveData();
             } else {
-                empStats.incorrect++;
+                if (isCorrect) {
+                    gameState.correct++;
+                } else {
+                    gameState.incorrectIds.push(emp.id);
+                }
             }
-            empStats.lastSeen = Date.now();
-            empStats.lastResult = isCorrect;
-            saveData();
 
             // Show result
             showResult(emp, isCorrect);
@@ -1182,39 +1304,64 @@
             gameState.active = false;
             statsBeforeGame = null;
 
-            // Calculate success rate (batch size / attempts)
-            const batchSize = gameState.originalBatchIds.size;
-            const successRate = Math.round((batchSize / gameState.totalAttempts) * 100);
+            if (gameState.mode === 'train') {
+                // Calculate success rate (batch size / attempts)
+                const batchSize = gameState.originalBatchIds.size;
+                const successRate = Math.round((batchSize / gameState.totalAttempts) * 100);
 
-            // Save game to history
-            stats.games.unshift({
-                date: Date.now(),
-                successRate: successRate,
-                batchSize: batchSize,
-                attempts: gameState.totalAttempts,
-                gameType: config.gameType
-            });
+                // Save game to history
+                stats.games.unshift({
+                    date: Date.now(),
+                    successRate: successRate,
+                    batchSize: batchSize,
+                    attempts: gameState.totalAttempts,
+                    gameType: config.gameType
+                });
 
-            // Keep only last 50 games
-            if (stats.games.length > 50) {
-                stats.games = stats.games.slice(0, 50);
+                // Keep only last 50 games
+                if (stats.games.length > 50) {
+                    stats.games = stats.games.slice(0, 50);
+                }
+
+                saveData();
+
+                document.getElementById('final-score').textContent = successRate + '%';
+                document.getElementById('final-correct').textContent =
+                    `${batchSize} in ${gameState.totalAttempts} attempts`;
+            } else {
+                const total = gameState.totalCount;
+                const successRate = Math.round((gameState.correct / total) * 100);
+                stats.tests.unshift({
+                    date: Date.now(),
+                    score: successRate,
+                    correct: gameState.correct,
+                    total: total,
+                    gameType: config.gameType,
+                    userName: config.userName,
+                    failedIds: [...gameState.incorrectIds]
+                });
+
+                if (stats.tests.length > 50) {
+                    stats.tests = stats.tests.slice(0, 50);
+                }
+
+                saveData();
+
+                document.getElementById('final-score').textContent = successRate + '%';
+                document.getElementById('final-correct').textContent =
+                    `${gameState.correct} of ${total} correct`;
             }
-
-            saveData();
 
             // Show batch complete
             document.getElementById('game-container').classList.remove('active');
             document.getElementById('batch-complete').classList.add('active');
             document.getElementById('cancel-training').style.display = 'none';
-
-            document.getElementById('final-score').textContent = successRate + '%';
-            document.getElementById('final-correct').textContent =
-                `${batchSize} in ${gameState.totalAttempts} attempts`;
         }
 
-        function cancelTraining() {
+        function cancelGame() {
             if (!gameState.active) return;
-            const shouldCancel = confirm('Cancel this training run? Your progress in this session will be lost.');
+            const label = gameState.mode === 'test' ? 'test' : 'training';
+            const shouldCancel = confirm(`Cancel this ${label} run? Your progress in this session will be lost.`);
             if (!shouldCancel) return;
 
             if (statsBeforeGame) {
@@ -1223,37 +1370,49 @@
                 updateStatsUI();
             }
 
+            resetGameState();
+            resetGameUI(gameState.mode);
+        }
+
+        function resetGameState() {
             gameState = {
                 active: false,
+                mode: gameState.mode || 'train',
                 queue: [],
                 originalBatchIds: new Set(),
                 correctlyAnsweredIds: new Set(),
                 currentEmployee: null,
                 totalAttempts: 0,
                 correct: 0,
+                totalCount: 0,
+                incorrectIds: [],
                 results: [],
                 answered: false
             };
             statsBeforeGame = null;
-
-            resetTrainingUI();
         }
 
-        function resetTrainingUI() {
+        function resetGameUI(mode) {
             document.getElementById('game-container').classList.remove('active');
             document.getElementById('batch-complete').classList.remove('active');
-            document.getElementById('start-game').style.display = 'block';
+            const startId = mode === 'test' ? 'start-test' : 'start-game';
+            const startBlock = document.getElementById(startId);
+            if (startBlock) {
+                startBlock.style.display = 'block';
+            }
             document.getElementById('cancel-training').style.display = 'none';
         }
 
-        function updateTrainingView() {
-            if (gameState.active) {
-                document.getElementById('start-game').style.display = 'none';
+        function updateGameView(mode) {
+            attachSharedGameUI(mode);
+            if (gameState.active && gameState.mode === mode) {
+                document.getElementById(mode === 'test' ? 'start-test' : 'start-game').style.display = 'none';
                 document.getElementById('game-container').classList.add('active');
                 document.getElementById('cancel-training').style.display = 'inline-block';
                 document.getElementById('batch-complete').classList.remove('active');
+                setModeLabels(mode);
             } else {
-                resetTrainingUI();
+                resetGameUI(mode);
             }
         }
 
@@ -1261,6 +1420,7 @@
         function updateStatsUI() {
             updateAveragePerformance();
             updateGameHistory();
+            updateTestHistory();
             updateEmployeeStats();
         }
 
@@ -1314,6 +1474,46 @@
                                     <td>${batchSize}</td>
                                     <td>${attempts}</td>
                                     <td>${typeLabel}</td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        function updateTestHistory() {
+            const container = document.getElementById('test-history');
+
+            if (!stats.tests || stats.tests.length === 0) {
+                container.innerHTML = '<div class="no-data">No tests taken yet</div>';
+                return;
+            }
+
+            container.innerHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date/Time</th>
+                            <th>Score</th>
+                            <th>Correct</th>
+                            <th>Mode</th>
+                            <th>Certificate</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${stats.tests.slice(0, 10).map((test, index) => {
+                            const date = new Date(test.date);
+                            const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                            const typeLabel = test.gameType === 'multiple-choice' ? 'MC' : 'Type';
+                            const score = test.score !== undefined ? test.score : Math.round((test.correct / test.total) * 100);
+                            return `
+                                <tr>
+                                    <td>${dateStr}</td>
+                                    <td><strong>${score}%</strong></td>
+                                    <td>${test.correct}/${test.total}</td>
+                                    <td>${typeLabel}</td>
+                                    <td><button class="btn btn-secondary certificate-btn" onclick="downloadTestCertificate(${index})">Download PDF</button></td>
                                 </tr>
                             `;
                         }).join('')}
@@ -1420,6 +1620,102 @@
                 employeeSortAsc = column === 'firstName' || column === 'lastName';
             }
             updateEmployeeStats();
+        }
+
+        function downloadTestCertificate(testIndex) {
+            const test = stats.tests[testIndex];
+            if (!test) return;
+
+            let name = (test.userName || config.userName || '').trim();
+            if (!name) {
+                name = prompt('Enter your name for the certificate:');
+            }
+            if (!name) return;
+
+            const scorePercent = test.score !== undefined ? test.score : Math.round((test.correct / test.total) * 100);
+            const scoreText = `${test.correct}/${test.total} (${scorePercent}%)`;
+
+            const failedIds = Array.isArray(test.failedIds) ? test.failedIds : [];
+            const recommendations = shuffleArray(failedIds)
+                .slice(0, 5)
+                .map(id => EMPLOYEES.find(emp => emp.id === id))
+                .filter(Boolean)
+                .map(emp => emp.fullName);
+
+            const certificateBlob = generateCertificatePdf({
+                name,
+                scoreText,
+                recommendations
+            });
+
+            const url = URL.createObjectURL(certificateBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `IPAI_Test_Certificate_${name.replace(/\s+/g, '_')}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+
+        function generateCertificatePdf({ name, scoreText, recommendations }) {
+            const header = '%PDF-1.4\n';
+            const lines = [
+                { text: 'IPAI Name Memorization Test Certificate', size: 18, x: 72, y: 720 },
+                { text: `Name: ${name}`, size: 14, x: 72, y: 680 },
+                { text: `Test Score: ${scoreText}`, size: 14, x: 72, y: 650 },
+                { text: 'Coffee suggestions (people you missed):', size: 12, x: 72, y: 610 }
+            ];
+
+            if (recommendations.length === 0) {
+                lines.push({ text: 'No missed names this time. Great job!', size: 12, x: 90, y: 585 });
+            } else {
+                recommendations.forEach((person, idx) => {
+                    lines.push({ text: `${idx + 1}. ${person}`, size: 12, x: 90, y: 585 - (idx * 18) });
+                });
+            }
+
+            const content = ['BT'];
+            lines.forEach(line => {
+                content.push(`/F1 ${line.size} Tf`);
+                content.push(`1 0 0 1 ${line.x} ${line.y} Tm`);
+                content.push(`(${escapePdfText(line.text)}) Tj`);
+            });
+            content.push('ET');
+
+            const contentStream = content.join('\n');
+
+            const objects = [];
+            objects.push('1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n');
+            objects.push('2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n');
+            objects.push('3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>\nendobj\n');
+            objects.push(`4 0 obj\n<< /Length ${contentStream.length} >>\nstream\n${contentStream}\nendstream\nendobj\n`);
+            objects.push('5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n');
+
+            let pdfBody = header;
+            const offsets = [0];
+            objects.forEach(obj => {
+                offsets.push(pdfBody.length);
+                pdfBody += obj;
+            });
+
+            const xrefStart = pdfBody.length;
+            let xref = `xref\n0 ${offsets.length}\n`;
+            xref += '0000000000 65535 f \n';
+            offsets.slice(1).forEach(offset => {
+                xref += `${String(offset).padStart(10, '0')} 00000 n \n`;
+            });
+            const trailer = `trailer\n<< /Size ${offsets.length} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF`;
+
+            const pdf = pdfBody + xref + trailer;
+            return new Blob([pdf], { type: 'application/pdf' });
+        }
+
+        function escapePdfText(text) {
+            return text
+                .replace(/\\/g, '\\\\')
+                .replace(/\(/g, '\\(')
+                .replace(/\)/g, '\\)');
         }
 
         // Keyboard handling
