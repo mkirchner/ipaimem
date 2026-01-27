@@ -254,6 +254,24 @@
             color: #666;
         }
 
+        .typing-feedback {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .typing-feedback.correct {
+            background-color: #4a9c5d;
+            color: white;
+        }
+
+        .typing-feedback.incorrect {
+            background-color: #c94444;
+            color: white;
+        }
+
         /* Result Display */
         .result {
             margin-top: 20px;
@@ -467,7 +485,7 @@
 
         <nav>
             <button id="nav-config" class="active" onclick="showSection('config')">Configuration</button>
-            <button id="nav-play" onclick="showSection('play')">Play</button>
+            <button id="nav-train" onclick="showSection('train')">Train</button>
             <button id="nav-stats" onclick="showSection('stats')">Statistics</button>
         </nav>
 
@@ -513,16 +531,16 @@
             </div>
         </div>
 
-        <!-- Play Section -->
-        <div id="play-section" class="section">
-            <h2>Play</h2>
+        <!-- Train Section -->
+        <div id="train-section" class="section">
+            <h2>Train</h2>
 
             <div class="config-info" id="current-config">
                 <!-- Filled by JS -->
             </div>
 
             <div id="start-game">
-                <button class="btn" onclick="startGame()">Start New Game</button>
+                <button class="btn" onclick="startGame()">Start Training</button>
             </div>
 
             <div id="game-container" class="game-container">
@@ -543,6 +561,7 @@
                     <div id="typing-mode" class="input-container" style="display: none;">
                         <input type="text" id="name-input" class="typing-input" placeholder="Type the name..." autocomplete="off">
                         <p class="input-hint">Press Enter to submit</p>
+                        <div id="typing-feedback" class="typing-feedback" style="display: none;"></div>
                     </div>
 
                     <div id="result" class="result" style="display: none;">
@@ -554,7 +573,7 @@
             </div>
 
             <div id="batch-complete" class="batch-complete">
-                <h3>Batch Complete!</h3>
+                <h3>Training Complete!</h3>
                 <div class="batch-stats">
                     <div class="batch-stat">
                         <div class="batch-stat-value" id="final-score">0%</div>
@@ -569,7 +588,7 @@
                         <div class="batch-stat-label">Total Points</div>
                     </div>
                 </div>
-                <button class="btn" onclick="startGame()">Play Again</button>
+                <button class="btn" onclick="startGame()">Train Again</button>
                 <button class="btn btn-secondary" onclick="showSection('stats')">View Statistics</button>
             </div>
         </div>
@@ -688,9 +707,12 @@
 
         let gameState = {
             active: false,
-            currentBatch: [],
-            currentIndex: 0,
-            correct: 0,
+            queue: [],                    // Queue of employees to ask (grows when wrong)
+            originalBatchIds: new Set(),  // IDs of original batch employees
+            correctlyAnsweredIds: new Set(), // IDs correctly answered at least once
+            currentEmployee: null,        // Current employee being shown
+            totalAttempts: 0,            // Total questions asked
+            correct: 0,                  // Correct answers on first attempt
             totalPoints: 0,
             results: [],
             answered: false
@@ -811,7 +833,7 @@
             if (section === 'stats') {
                 updateStatsUI();
             }
-            if (section === 'play') {
+            if (section === 'train') {
                 updateCurrentConfigDisplay();
             }
         }
@@ -879,10 +901,16 @@
 
         // Game Logic
         function startGame() {
+            const batch = selectBatch(config.batchSize);
+            const originalIds = new Set(batch.map(e => e.id));
+
             gameState = {
                 active: true,
-                currentBatch: selectBatch(config.batchSize),
-                currentIndex: 0,
+                queue: [...batch],           // Copy of batch as queue
+                originalBatchIds: originalIds,
+                correctlyAnsweredIds: new Set(),
+                currentEmployee: null,
+                totalAttempts: 0,
                 correct: 0,
                 totalPoints: 0,
                 results: [],
@@ -897,14 +925,18 @@
         }
 
         function showCard() {
-            const emp = gameState.currentBatch[gameState.currentIndex];
+            // Get next employee from queue
+            const emp = gameState.queue.shift();
+            gameState.currentEmployee = emp;
             gameState.answered = false;
 
-            // Update progress
-            const progress = ((gameState.currentIndex) / gameState.currentBatch.length) * 100;
+            // Update progress (based on how many correctly answered vs original batch)
+            const completed = gameState.correctlyAnsweredIds.size;
+            const total = gameState.originalBatchIds.size;
+            const progress = (completed / total) * 100;
             document.getElementById('progress-fill').style.width = progress + '%';
             document.getElementById('progress-text').textContent =
-                `Card ${gameState.currentIndex + 1} of ${gameState.currentBatch.length}`;
+                `${completed} of ${total} learned (${gameState.queue.length + 1} remaining)`;
 
             // Show image
             document.getElementById('card-image').src = emp.image;
@@ -950,13 +982,18 @@
             input.value = '';
             input.disabled = false;
             input.focus();
+
+            // Reset feedback
+            const feedback = document.getElementById('typing-feedback');
+            feedback.style.display = 'none';
+            feedback.className = 'typing-feedback';
         }
 
         function submitChoice(chosenId) {
             if (gameState.answered) return;
             gameState.answered = true;
 
-            const emp = gameState.currentBatch[gameState.currentIndex];
+            const emp = gameState.currentEmployee;
             const isCorrect = chosenId === emp.id;
 
             // Update button styles
@@ -985,7 +1022,7 @@
             gameState.answered = true;
             input.disabled = true;
 
-            const emp = gameState.currentBatch[gameState.currentIndex];
+            const emp = gameState.currentEmployee;
             const firstName = emp.firstName.toLowerCase();
             const lastName = emp.lastName.toLowerCase();
             const fullName = emp.fullName.toLowerCase();
@@ -1005,22 +1042,41 @@
                 points = 15; // Extra points for last name
             }
 
+            // Show feedback with name
+            const feedback = document.getElementById('typing-feedback');
+            feedback.style.display = 'block';
+            feedback.className = 'typing-feedback ' + (isCorrect ? 'correct' : 'incorrect');
+            feedback.textContent = emp.fullName;
+
             recordAnswer(emp, isCorrect, points);
         }
 
         function recordAnswer(emp, isCorrect, points) {
-            // Update game state
+            gameState.totalAttempts++;
+
+            // Track correct answers on first attempt only
+            const isFirstAttempt = !gameState.correctlyAnsweredIds.has(emp.id);
+
             if (isCorrect) {
-                gameState.correct++;
+                // Mark as correctly answered
+                gameState.correctlyAnsweredIds.add(emp.id);
+                if (isFirstAttempt) {
+                    gameState.correct++;
+                }
+            } else {
+                // Re-add to queue for another attempt
+                gameState.queue.push(emp);
             }
+
             gameState.totalPoints += points;
             gameState.results.push({
                 employeeId: emp.id,
                 correct: isCorrect,
-                points: points
+                points: points,
+                firstAttempt: isFirstAttempt
             });
 
-            // Update employee stats
+            // Update employee stats (track all attempts)
             const empStats = stats.employeeStats[emp.id];
             if (isCorrect) {
                 empStats.correct++;
@@ -1057,9 +1113,8 @@
         }
 
         function nextCard() {
-            gameState.currentIndex++;
-
-            if (gameState.currentIndex >= gameState.currentBatch.length) {
+            // Check if all employees have been correctly answered
+            if (gameState.queue.length === 0) {
                 endGame();
             } else {
                 showCard();
@@ -1069,15 +1124,17 @@
         function endGame() {
             gameState.active = false;
 
-            // Calculate final score
-            const score = Math.round((gameState.correct / gameState.currentBatch.length) * 100);
+            // Calculate final score (first-attempt accuracy)
+            const batchSize = gameState.originalBatchIds.size;
+            const score = Math.round((gameState.correct / batchSize) * 100);
 
             // Save game to history
             stats.games.unshift({
                 date: Date.now(),
                 score: score,
                 correct: gameState.correct,
-                total: gameState.currentBatch.length,
+                total: batchSize,
+                attempts: gameState.totalAttempts,
                 points: gameState.totalPoints,
                 gameType: config.gameType
             });
@@ -1095,7 +1152,7 @@
 
             document.getElementById('final-score').textContent = score + '%';
             document.getElementById('final-correct').textContent =
-                `${gameState.correct}/${gameState.currentBatch.length}`;
+                `${gameState.correct}/${batchSize} first try`;
             document.getElementById('final-points').textContent = gameState.totalPoints;
         }
 
@@ -1131,13 +1188,14 @@
                 const date = new Date(game.date);
                 const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                 const typeLabel = game.gameType === 'multiple-choice' ? 'MC' : 'Type';
+                const attemptsStr = game.attempts ? ` (${game.attempts} attempts)` : '';
 
                 return `
                     <div class="game-history-item">
                         <div class="game-history-date">${dateStr}</div>
                         <div class="game-history-stats">
                             <span><strong>${game.score}%</strong></span>
-                            <span>${game.correct}/${game.total} correct</span>
+                            <span>${game.correct}/${game.total} first try${attemptsStr}</span>
                             <span>${game.points} pts</span>
                             <span>${typeLabel}</span>
                         </div>
