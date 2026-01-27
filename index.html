@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IPAI Employee Memorization</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            background-color: #dbe1e0;
+            color: black;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 20px 0;
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            font-weight: 700;
+            color: #d46e31;
+        }
+
+        nav {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        nav button {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            background-color: #c2cecb;
+            color: black;
+            transition: background-color 0.2s;
+        }
+
+        nav button:hover {
+            background-color: #b3bfbc;
+        }
+
+        nav button.active {
+            background-color: #d46e31;
+            color: white;
+            font-weight: 600;
+        }
+
+        .section {
+            display: none;
+            background-color: #c2cecb;
+            border-radius: 12px;
+            padding: 25px;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        .section h2 {
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: #d46e31;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .form-group input,
+        .form-group select {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            background-color: #dbe1e0;
+            width: 200px;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: 2px solid #d46e31;
+        }
+
+        .btn {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            background-color: #d46e31;
+            color: white;
+            font-weight: 600;
+            transition: background-color 0.2s;
+        }
+
+        .btn:hover {
+            background-color: #c25e28;
+        }
+
+        .btn:disabled {
+            background-color: #999;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background-color: #dbe1e0;
+            color: black;
+        }
+
+        .btn-secondary:hover {
+            background-color: #cdd3d2;
+        }
+
+        /* Play Section */
+        .game-container {
+            display: none;
+        }
+
+        .game-container.active {
+            display: block;
+        }
+
+        .card {
+            background-color: #dbe1e0;
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .card-image {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin: 0 auto 20px;
+            display: block;
+            border: 4px solid #d46e31;
+        }
+
+        .progress-bar {
+            background-color: #dbe1e0;
+            border-radius: 8px;
+            height: 20px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            background-color: #d46e31;
+            height: 100%;
+            transition: width 0.3s;
+        }
+
+        .progress-text {
+            text-align: center;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        /* Multiple Choice */
+        .choices {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .choice-btn {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            background-color: white;
+            color: black;
+            transition: all 0.2s;
+        }
+
+        .choice-btn:hover:not(:disabled) {
+            background-color: #d46e31;
+            color: white;
+        }
+
+        .choice-btn.correct {
+            background-color: #4a9c5d;
+            color: white;
+        }
+
+        .choice-btn.incorrect {
+            background-color: #c94444;
+            color: white;
+        }
+
+        .choice-btn:disabled {
+            cursor: default;
+        }
+
+        /* Typing Mode */
+        .typing-input {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            background-color: white;
+        }
+
+        .typing-input:focus {
+            outline: 2px solid #d46e31;
+        }
+
+        .input-container {
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .input-hint {
+            margin-top: 10px;
+            color: #666;
+        }
+
+        /* Result Display */
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+
+        .result.correct {
+            background-color: #4a9c5d;
+            color: white;
+        }
+
+        .result.incorrect {
+            background-color: #c94444;
+            color: white;
+        }
+
+        .result .correct-answer {
+            margin-top: 10px;
+            font-weight: 400;
+        }
+
+        .result .points {
+            margin-top: 5px;
+            font-weight: 400;
+        }
+
+        .continue-btn {
+            margin-top: 20px;
+        }
+
+        /* Batch Complete */
+        .batch-complete {
+            display: none;
+            text-align: center;
+        }
+
+        .batch-complete.active {
+            display: block;
+        }
+
+        .batch-stats {
+            background-color: #dbe1e0;
+            border-radius: 12px;
+            padding: 25px;
+            margin: 20px 0;
+        }
+
+        .batch-stat {
+            margin: 10px 0;
+        }
+
+        .batch-stat-value {
+            font-weight: 700;
+            font-size: 24px;
+            color: #d46e31;
+        }
+
+        .batch-stat-label {
+            color: #666;
+        }
+
+        /* Statistics Section */
+        .stats-card {
+            background-color: #dbe1e0;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .stats-card h3 {
+            font-weight: 700;
+            margin-bottom: 15px;
+            color: #d46e31;
+        }
+
+        .avg-performance {
+            font-size: 32px;
+            font-weight: 700;
+            color: #d46e31;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #c2cecb;
+        }
+
+        th {
+            font-weight: 700;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        th:hover {
+            color: #d46e31;
+        }
+
+        th.sorted {
+            color: #d46e31;
+        }
+
+        .sort-indicator {
+            margin-left: 5px;
+        }
+
+        tr:hover {
+            background-color: rgba(212, 110, 49, 0.1);
+        }
+
+        .fail-rate-high {
+            color: #c94444;
+            font-weight: 600;
+        }
+
+        .fail-rate-medium {
+            color: #d46e31;
+        }
+
+        .fail-rate-low {
+            color: #4a9c5d;
+        }
+
+        /* Game History */
+        .game-history-item {
+            background-color: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+        }
+
+        .game-history-date {
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .game-history-stats {
+            display: flex;
+            gap: 20px;
+        }
+
+        .no-data {
+            text-align: center;
+            color: #666;
+            padding: 30px;
+        }
+
+        /* Configuration Info */
+        .config-info {
+            background-color: #dbe1e0;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .config-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+
+        .config-row:last-child {
+            margin-bottom: 0;
+        }
+
+        /* Reset Button */
+        .danger-zone {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #b3bfbc;
+        }
+
+        .btn-danger {
+            background-color: #c94444;
+        }
+
+        .btn-danger:hover {
+            background-color: #b33a3a;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .card-image {
+                width: 150px;
+                height: 150px;
+            }
+
+            nav {
+                flex-wrap: wrap;
+            }
+
+            .game-history-stats {
+                flex-direction: column;
+                gap: 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>IPAI Face Memory</h1>
+        </header>
+
+        <nav>
+            <button id="nav-config" class="active" onclick="showSection('config')">Configuration</button>
+            <button id="nav-play" onclick="showSection('play')">Play</button>
+            <button id="nav-stats" onclick="showSection('stats')">Statistics</button>
+        </nav>
+
+        <!-- Configuration Section -->
+        <div id="config-section" class="section active">
+            <h2>Game Configuration</h2>
+
+            <div class="form-group">
+                <label for="batch-size">Batch Size</label>
+                <input type="number" id="batch-size" min="5" max="70" value="20">
+            </div>
+
+            <div class="form-group">
+                <label for="pass-rate">Pass Rate (%)</label>
+                <input type="number" id="pass-rate" min="50" max="100" value="80">
+            </div>
+
+            <div class="form-group">
+                <label for="game-type">Game Type</label>
+                <select id="game-type">
+                    <option value="multiple-choice">Multiple Choice</option>
+                    <option value="typing">Type the Name</option>
+                </select>
+            </div>
+
+            <button class="btn" onclick="saveConfig()">Save Configuration</button>
+
+            <div class="danger-zone">
+                <p style="margin-bottom: 10px; font-weight: 600;">Danger Zone</p>
+                <button class="btn btn-danger" onclick="resetAllData()">Reset All Data</button>
+            </div>
+        </div>
+
+        <!-- Play Section -->
+        <div id="play-section" class="section">
+            <h2>Play</h2>
+
+            <div class="config-info" id="current-config">
+                <!-- Filled by JS -->
+            </div>
+
+            <div id="start-game">
+                <button class="btn" onclick="startGame()">Start New Game</button>
+            </div>
+
+            <div id="game-container" class="game-container">
+                <div class="progress-text" id="progress-text">Card 1 of 20</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+                </div>
+
+                <div class="card">
+                    <img id="card-image" class="card-image" src="" alt="Employee photo">
+
+                    <!-- Multiple Choice Mode -->
+                    <div id="multiple-choice-mode" class="choices">
+                        <!-- Filled by JS -->
+                    </div>
+
+                    <!-- Typing Mode -->
+                    <div id="typing-mode" class="input-container" style="display: none;">
+                        <input type="text" id="name-input" class="typing-input" placeholder="Type the name..." autocomplete="off">
+                        <p class="input-hint">Press Enter to submit</p>
+                    </div>
+
+                    <div id="result" class="result" style="display: none;">
+                        <!-- Filled by JS -->
+                    </div>
+
+                    <button id="continue-btn" class="btn continue-btn" style="display: none;" onclick="nextCard()">Continue (Enter)</button>
+                </div>
+            </div>
+
+            <div id="batch-complete" class="batch-complete">
+                <h3>Batch Complete!</h3>
+                <div class="batch-stats">
+                    <div class="batch-stat">
+                        <div class="batch-stat-value" id="final-score">0%</div>
+                        <div class="batch-stat-label">Score</div>
+                    </div>
+                    <div class="batch-stat">
+                        <div class="batch-stat-value" id="final-correct">0/0</div>
+                        <div class="batch-stat-label">Correct</div>
+                    </div>
+                    <div class="batch-stat">
+                        <div class="batch-stat-value" id="final-points">0</div>
+                        <div class="batch-stat-label">Total Points</div>
+                    </div>
+                    <div class="batch-stat">
+                        <div id="pass-fail-result"></div>
+                    </div>
+                </div>
+                <button class="btn" onclick="startGame()">Play Again</button>
+                <button class="btn btn-secondary" onclick="showSection('stats')">View Statistics</button>
+            </div>
+        </div>
+
+        <!-- Statistics Section -->
+        <div id="stats-section" class="section">
+            <h2>Statistics</h2>
+
+            <div class="stats-card">
+                <h3>Average Performance (Last 3 Games)</h3>
+                <div id="avg-performance" class="avg-performance">--</div>
+            </div>
+
+            <div class="stats-card">
+                <h3>Game History</h3>
+                <div id="game-history">
+                    <!-- Filled by JS -->
+                </div>
+            </div>
+
+            <div class="stats-card">
+                <h3>Employee Performance</h3>
+                <div id="employee-stats">
+                    <!-- Filled by JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Employee Data
+        const EMPLOYEES = [
+            { firstName: "Tim", lastName: "Do Khac", image: "https://ip.ai/wp-content/uploads/2024/04/Tim-D-K_1x1-scaled.jpg" },
+            { firstName: "Niklas", lastName: "Kiefl", image: "https://ip.ai/wp-content/uploads/2024/08/Niklas_1x1-scaled.jpg" },
+            { firstName: "Tanja", lastName: "Palalic", image: "https://ip.ai/wp-content/uploads/2025/02/1x1_Tanja.png" },
+            { firstName: "Sirid", lastName: "Bohm", image: "https://ip.ai/wp-content/uploads/2025/11/Sirid_1.jpeg" },
+            { firstName: "Jan", lastName: "Denia", image: "https://ip.ai/wp-content/uploads/2023/05/Jan_1x1-scaled.jpg" },
+            { firstName: "Luca", lastName: "Baumlisberger", image: "https://ip.ai/wp-content/uploads/2025/04/1x1_Luca-B.png" },
+            { firstName: "Florian", lastName: "Beier", image: "https://ip.ai/wp-content/uploads/2025/02/1x1_Florian.png" },
+            { firstName: "Natascha", lastName: "Kirschner", image: "https://ip.ai/wp-content/uploads/2025/02/1x1_Natascha.png" },
+            { firstName: "Jaana", lastName: "Muller-Brehm", image: "https://ip.ai/wp-content/uploads/2025/04/1x1_Jaana.png" },
+            { firstName: "Janina", lastName: "Zeller", image: "https://ip.ai/wp-content/uploads/2025/05/1x1_Janina.png" },
+            { firstName: "Linda", lastName: "Kruger", image: "https://ip.ai/wp-content/uploads/2025/07/DSC02887.jpg" },
+            { firstName: "Alexander", lastName: "Stein", image: "https://ip.ai/wp-content/uploads/2024/02/Alex_1x1-scaled.jpg" },
+            { firstName: "Jella", lastName: "Hauptmann", image: "https://ip.ai/wp-content/uploads/2023/05/Jella_1x1-scaled.jpg" },
+            { firstName: "Olga", lastName: "Willmann", image: "https://ip.ai/wp-content/uploads/2025/02/Olga_1x1-2-scaled.jpg" },
+            { firstName: "Nikola", lastName: "Cabarkapa", image: "https://ip.ai/wp-content/uploads/2023/09/Nikola_1x1-1-scaled.jpg" },
+            { firstName: "Oliver", lastName: "Schmidt", image: "https://ip.ai/wp-content/uploads/2023/09/Olli_1x1-scaled.jpg" },
+            { firstName: "Michael", lastName: "Beuttenmuller", image: "https://ip.ai/wp-content/uploads/2025/10/Michael_1.jpeg" },
+            { firstName: "Tatjana", lastName: "Mende", image: "https://ip.ai/wp-content/uploads/2025/05/1x1_Tatjana.png" },
+            { firstName: "Max", lastName: "Brummer", image: "https://ip.ai/wp-content/uploads/2023/05/Max_1x1-scaled.jpg" },
+            { firstName: "Nadine", lastName: "Kern", image: "https://ip.ai/wp-content/uploads/2023/12/Nadine_1x1-scaled.jpg" },
+            { firstName: "Svenja", lastName: "Enchelmaier", image: "https://ip.ai/wp-content/uploads/2025/06/Svenja_3_web-1.jpg" },
+            { firstName: "Janina", lastName: "Schafer", image: "https://ip.ai/wp-content/uploads/2023/05/Janina_1x1-scaled.jpg" },
+            { firstName: "Lena", lastName: "Ertel", image: "https://ip.ai/wp-content/uploads/2025/02/Lena_1x1-scaled.jpg" },
+            { firstName: "Walter", lastName: "Schmidt", image: "https://ip.ai/wp-content/uploads/2024/05/Walter_1x1-scaled.jpg" },
+            { firstName: "Jennifer", lastName: "Flansburg", image: "https://ip.ai/wp-content/uploads/2024/05/Jenny-F_1x1-scaled.jpg" },
+            { firstName: "Sofia", lastName: "Willhauk", image: "https://ip.ai/wp-content/uploads/2025/04/1x1_Sofia.png" },
+            { firstName: "Anna", lastName: "Nerobova", image: "https://ip.ai/wp-content/uploads/2024/07/Anna_1x1-scaled.jpg" },
+            { firstName: "Moritz", lastName: "Grater", image: "https://ip.ai/wp-content/uploads/2023/05/Moritz_1x1-scaled.jpg" },
+            { firstName: "Meike", lastName: "Muhlbauer", image: "https://ip.ai/wp-content/uploads/2024/02/Meike_1x1-scaled.jpg" },
+            { firstName: "Mergim", lastName: "Ashani", image: "https://ip.ai/wp-content/uploads/2025/02/Mergim_1x1-scaled.jpg" },
+            { firstName: "Franziska", lastName: "Kirchert", image: "https://ip.ai/wp-content/uploads/2024/04/Franzi-scaled.jpg" },
+            { firstName: "Fabian", lastName: "Grau", image: "https://ip.ai/wp-content/uploads/2025/02/1x1_Fabian.png" },
+            { firstName: "Julian", lastName: "Thoma", image: "https://ip.ai/wp-content/uploads/2025/09/Julian_2-scaled.jpg" },
+            { firstName: "Sandra", lastName: "Bojang", image: "https://ip.ai/wp-content/uploads/2024/04/Sandra_1x1-scaled.jpg" },
+            { firstName: "Isabell", lastName: "Dorr-Nill", image: "https://ip.ai/wp-content/uploads/2025/02/1x1_Isabell.png" },
+            { firstName: "Britta", lastName: "Weddeling", image: "https://ip.ai/wp-content/uploads/2025/02/1x1_Britta.png" },
+            { firstName: "Constanze", lastName: "Zawadzky", image: "https://ip.ai/wp-content/uploads/2023/05/Constanze_1x1-scaled.jpg" },
+            { firstName: "Veronika", lastName: "Prochazka", image: "https://ip.ai/wp-content/uploads/2023/05/Veronika_1x1-scaled.jpg" },
+            { firstName: "Christopher", lastName: "Seid", image: "https://ip.ai/wp-content/uploads/2025/04/1x1_Chris.png" },
+            { firstName: "Jacqueline", lastName: "Roth-Ruoff", image: "https://ip.ai/wp-content/uploads/2025/08/Jacqueline_final-scaled.jpg" },
+            { firstName: "Benjamin", lastName: "Schiller", image: "https://ip.ai/wp-content/uploads/2023/05/Ben_1x1-scaled.jpg" },
+            { firstName: "Amelie", lastName: "Kretz", image: "https://ip.ai/wp-content/uploads/2024/02/Amy_1x1-scaled.jpg" },
+            { firstName: "Patrick", lastName: "Pickhan", image: "https://ip.ai/wp-content/uploads/2025/10/Patrick_1.jpeg" },
+            { firstName: "Berenice", lastName: "Alburg", image: "https://ip.ai/wp-content/uploads/2025/10/Berenice_1-scaled.jpeg" },
+            { firstName: "Tim", lastName: "Schmitt", image: "https://ip.ai/wp-content/uploads/2024/02/Tim-S_1x1-scaled.jpg" },
+            { firstName: "Alexandra", lastName: "von der Decken", image: "https://ip.ai/wp-content/uploads/2025/03/1x1_Alexandra.png" },
+            { firstName: "Claudio", lastName: "Weck", image: "https://ip.ai/wp-content/uploads/2025/02/Claudio_1x1-scaled.jpg" },
+            { firstName: "Fabienne", lastName: "Gysinn", image: "https://ip.ai/wp-content/uploads/2024/07/Fabienne_Gysinn-1.jpg" },
+            { firstName: "Dilara", lastName: "Pamukcuoglu", image: "https://ip.ai/wp-content/uploads/2025/05/1x1_Dilara.png" },
+            { firstName: "Mariane", lastName: "El Ghrayche", image: "https://ip.ai/wp-content/uploads/2025/10/Mariane_4-scaled.jpeg" },
+            { firstName: "Sophia", lastName: "Roeger", image: "https://ip.ai/wp-content/uploads/2023/05/Sophia-R_1x1-scaled.jpg" },
+            { firstName: "Tamara", lastName: "Pyter", image: "https://ip.ai/wp-content/uploads/2025/11/Tamara_3-Kopie-scaled.jpg" },
+            { firstName: "Ahmed", lastName: "Abdelkader Ibrahim", image: "https://ip.ai/wp-content/uploads/2024/02/Ahmed_1x1-scaled.jpg" },
+            { firstName: "Ildiko", lastName: "Maurer", image: "https://ip.ai/wp-content/uploads/2024/02/Ildiko_1x1-scaled.jpg" },
+            { firstName: "Thomas", lastName: "Kreuzer", image: "https://ip.ai/wp-content/uploads/2025/04/1x1_Thomas.png" },
+            { firstName: "Nick", lastName: "Jennes", image: "https://ip.ai/wp-content/uploads/2025/02/1x1_Nick.png" },
+            { firstName: "Joy", lastName: "Lauter", image: "https://ip.ai/wp-content/uploads/2024/07/Joy_1x1-scaled.jpg" },
+            { firstName: "Christian", lastName: "Haug", image: "https://ip.ai/wp-content/uploads/2025/08/Christian_final-scaled.jpg" },
+            { firstName: "Marcel", lastName: "Mehl", image: "https://ip.ai/wp-content/uploads/2023/05/Marcel_1x1-scaled.jpg" },
+            { firstName: "Jana", lastName: "Greiser", image: "https://ip.ai/wp-content/uploads/2025/08/Jana_final-scaled.jpg" },
+            { firstName: "Carolin", lastName: "Spaeth", image: "https://ip.ai/wp-content/uploads/2024/04/Caro-S_1x1-scaled.jpg" },
+            { firstName: "Anita", lastName: "Klingel", image: "https://ip.ai/wp-content/uploads/2025/05/1x1_Anita.png" },
+            { firstName: "Ronja", lastName: "Bartenbach", image: "https://ip.ai/wp-content/uploads/2025/10/Ronja_2.jpg" },
+            { firstName: "Jazmin", lastName: "Toth", image: "https://ip.ai/wp-content/uploads/2025/10/Jazmin_4.jpeg" },
+            { firstName: "Jana", lastName: "Strattner", image: "https://ip.ai/wp-content/uploads/2024/08/Jana_1x1-scaled.jpg" },
+            { firstName: "Kirstin", lastName: "Heinl", image: "https://ip.ai/wp-content/uploads/2025/06/Kirstin_1_web-1-scaled.jpg" },
+            { firstName: "Sophia", lastName: "Boger", image: "https://ip.ai/wp-content/uploads/2023/12/Sophia-B_1x1-scaled.jpg" },
+            { firstName: "Carolin", lastName: "Rehder", image: "https://ip.ai/wp-content/uploads/2024/02/Caro_R2.jpg" },
+            { firstName: "Tim", lastName: "Roder", image: "https://ip.ai/wp-content/uploads/2024/02/Tim-R_1x1-scaled.jpg" },
+            { firstName: "Janina", lastName: "Schmitz", image: "https://ip.ai/wp-content/uploads/2025/07/Janina-Schmitz_1.jpg" }
+        ];
+
+        // Add unique IDs to employees
+        EMPLOYEES.forEach((emp, idx) => {
+            emp.id = idx;
+            emp.fullName = `${emp.firstName} ${emp.lastName}`;
+        });
+
+        // State
+        let config = {
+            batchSize: 20,
+            passRate: 80,
+            gameType: 'multiple-choice'
+        };
+
+        let gameState = {
+            active: false,
+            currentBatch: [],
+            currentIndex: 0,
+            correct: 0,
+            totalPoints: 0,
+            results: [],
+            answered: false
+        };
+
+        let stats = {
+            games: [],
+            employeeStats: {}
+        };
+
+        // Cookie helpers
+        function setCookie(name, value, days = 365) {
+            const expires = new Date(Date.now() + days * 864e5).toUTCString();
+            document.cookie = name + '=' + encodeURIComponent(JSON.stringify(value)) + '; expires=' + expires + '; path=/; SameSite=Strict';
+        }
+
+        function getCookie(name) {
+            const value = document.cookie.split('; ').find(row => row.startsWith(name + '='));
+            if (value) {
+                try {
+                    return JSON.parse(decodeURIComponent(value.split('=')[1]));
+                } catch (e) {
+                    return null;
+                }
+            }
+            return null;
+        }
+
+        function deleteCookie(name) {
+            document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+        }
+
+        // Load data from cookies
+        function loadData() {
+            const savedConfig = getCookie('ipai_config');
+            if (savedConfig) {
+                config = { ...config, ...savedConfig };
+            }
+
+            const savedStats = getCookie('ipai_stats');
+            if (savedStats) {
+                stats = savedStats;
+            }
+
+            // Initialize employee stats for all employees
+            EMPLOYEES.forEach(emp => {
+                if (!stats.employeeStats[emp.id]) {
+                    stats.employeeStats[emp.id] = {
+                        correct: 0,
+                        incorrect: 0,
+                        lastSeen: null,
+                        lastResult: null
+                    };
+                }
+            });
+
+            updateConfigUI();
+        }
+
+        // Save data to cookies
+        function saveData() {
+            setCookie('ipai_config', config);
+            setCookie('ipai_stats', stats);
+        }
+
+        // Update config UI
+        function updateConfigUI() {
+            document.getElementById('batch-size').value = config.batchSize;
+            document.getElementById('pass-rate').value = config.passRate;
+            document.getElementById('game-type').value = config.gameType;
+            updateCurrentConfigDisplay();
+        }
+
+        function updateCurrentConfigDisplay() {
+            const configInfo = document.getElementById('current-config');
+            const gameTypeLabel = config.gameType === 'multiple-choice' ? 'Multiple Choice' : 'Type the Name';
+            configInfo.innerHTML = `
+                <div class="config-row">
+                    <span>Batch Size:</span>
+                    <span><strong>${config.batchSize}</strong></span>
+                </div>
+                <div class="config-row">
+                    <span>Pass Rate:</span>
+                    <span><strong>${config.passRate}%</strong></span>
+                </div>
+                <div class="config-row">
+                    <span>Game Type:</span>
+                    <span><strong>${gameTypeLabel}</strong></span>
+                </div>
+            `;
+        }
+
+        // Save configuration
+        function saveConfig() {
+            config.batchSize = Math.min(70, Math.max(5, parseInt(document.getElementById('batch-size').value) || 20));
+            config.passRate = Math.min(100, Math.max(50, parseInt(document.getElementById('pass-rate').value) || 80));
+            config.gameType = document.getElementById('game-type').value;
+            saveData();
+            updateConfigUI();
+            alert('Configuration saved!');
+        }
+
+        // Reset all data
+        function resetAllData() {
+            if (confirm('Are you sure you want to reset all game data? This cannot be undone.')) {
+                deleteCookie('ipai_config');
+                deleteCookie('ipai_stats');
+                stats = { games: [], employeeStats: {} };
+                config = { batchSize: 20, passRate: 80, gameType: 'multiple-choice' };
+                loadData();
+                updateStatsUI();
+                alert('All data has been reset.');
+            }
+        }
+
+        // Navigation
+        function showSection(section) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+
+            document.getElementById(section + '-section').classList.add('active');
+            document.getElementById('nav-' + section).classList.add('active');
+
+            if (section === 'stats') {
+                updateStatsUI();
+            }
+            if (section === 'play') {
+                updateCurrentConfigDisplay();
+            }
+        }
+
+        // Spaced Repetition Algorithm
+        function calculatePriority(empId) {
+            const empStats = stats.employeeStats[empId];
+            if (!empStats) return 1000; // New employee, high priority
+
+            const total = empStats.correct + empStats.incorrect;
+            if (total === 0) return 1000; // Never seen, high priority
+
+            // Calculate fail rate (0-1)
+            const failRate = empStats.incorrect / total;
+
+            // Calculate time since last seen (in hours)
+            const now = Date.now();
+            const lastSeen = empStats.lastSeen || 0;
+            const hoursSinceLastSeen = (now - lastSeen) / (1000 * 60 * 60);
+
+            // Spaced repetition formula:
+            // - Higher fail rate = higher priority
+            // - Longer time since last seen = higher priority
+            // - Recent failure = highest priority
+
+            let priority = 0;
+
+            // Base priority from fail rate (0-500)
+            priority += failRate * 500;
+
+            // Time decay factor (0-300)
+            // More time = higher priority, capped at ~1 week
+            const timeFactor = Math.min(hoursSinceLastSeen / 168, 1) * 300;
+            priority += timeFactor;
+
+            // Boost for recent failures
+            if (empStats.lastResult === false) {
+                priority += 200;
+            }
+
+            // Small penalty for very recently seen (within last hour)
+            if (hoursSinceLastSeen < 1) {
+                priority -= 100;
+            }
+
+            // Add small random factor to avoid always same order
+            priority += Math.random() * 50;
+
+            return priority;
+        }
+
+        function selectBatch(size) {
+            // Calculate priority for each employee
+            const prioritized = EMPLOYEES.map(emp => ({
+                employee: emp,
+                priority: calculatePriority(emp.id)
+            }));
+
+            // Sort by priority (highest first)
+            prioritized.sort((a, b) => b.priority - a.priority);
+
+            // Take top N
+            return prioritized.slice(0, size).map(p => p.employee);
+        }
+
+        // Game Logic
+        function startGame() {
+            gameState = {
+                active: true,
+                currentBatch: selectBatch(config.batchSize),
+                currentIndex: 0,
+                correct: 0,
+                totalPoints: 0,
+                results: [],
+                answered: false
+            };
+
+            document.getElementById('start-game').style.display = 'none';
+            document.getElementById('game-container').classList.add('active');
+            document.getElementById('batch-complete').classList.remove('active');
+
+            showCard();
+        }
+
+        function showCard() {
+            const emp = gameState.currentBatch[gameState.currentIndex];
+            gameState.answered = false;
+
+            // Update progress
+            const progress = ((gameState.currentIndex) / gameState.currentBatch.length) * 100;
+            document.getElementById('progress-fill').style.width = progress + '%';
+            document.getElementById('progress-text').textContent =
+                `Card ${gameState.currentIndex + 1} of ${gameState.currentBatch.length}`;
+
+            // Show image
+            document.getElementById('card-image').src = emp.image;
+
+            // Hide result and continue button
+            document.getElementById('result').style.display = 'none';
+            document.getElementById('continue-btn').style.display = 'none';
+
+            // Setup game mode
+            if (config.gameType === 'multiple-choice') {
+                setupMultipleChoice(emp);
+            } else {
+                setupTypingMode(emp);
+            }
+        }
+
+        function setupMultipleChoice(correctEmp) {
+            document.getElementById('multiple-choice-mode').style.display = 'flex';
+            document.getElementById('typing-mode').style.display = 'none';
+
+            // Get 2 random wrong answers
+            const otherEmps = EMPLOYEES.filter(e => e.id !== correctEmp.id);
+            const shuffled = otherEmps.sort(() => Math.random() - 0.5);
+            const wrongAnswers = shuffled.slice(0, 2);
+
+            // Combine and shuffle
+            const choices = [correctEmp, ...wrongAnswers].sort(() => Math.random() - 0.5);
+
+            // Render buttons
+            const container = document.getElementById('multiple-choice-mode');
+            container.innerHTML = choices.map(emp => `
+                <button class="choice-btn" data-id="${emp.id}" onclick="submitChoice(${emp.id})">
+                    ${emp.fullName}
+                </button>
+            `).join('');
+        }
+
+        function setupTypingMode(emp) {
+            document.getElementById('multiple-choice-mode').style.display = 'none';
+            document.getElementById('typing-mode').style.display = 'block';
+
+            const input = document.getElementById('name-input');
+            input.value = '';
+            input.disabled = false;
+            input.focus();
+        }
+
+        function submitChoice(chosenId) {
+            if (gameState.answered) return;
+            gameState.answered = true;
+
+            const emp = gameState.currentBatch[gameState.currentIndex];
+            const isCorrect = chosenId === emp.id;
+
+            // Update button styles
+            document.querySelectorAll('.choice-btn').forEach(btn => {
+                btn.disabled = true;
+                const btnId = parseInt(btn.dataset.id);
+                if (btnId === emp.id) {
+                    btn.classList.add('correct');
+                } else if (btnId === chosenId && !isCorrect) {
+                    btn.classList.add('incorrect');
+                }
+            });
+
+            const points = isCorrect ? 10 : 0;
+            recordAnswer(emp, isCorrect, points);
+        }
+
+        function submitTyping() {
+            if (gameState.answered) return;
+
+            const input = document.getElementById('name-input');
+            const answer = input.value.trim().toLowerCase();
+
+            if (!answer) return;
+
+            gameState.answered = true;
+            input.disabled = true;
+
+            const emp = gameState.currentBatch[gameState.currentIndex];
+            const firstName = emp.firstName.toLowerCase();
+            const lastName = emp.lastName.toLowerCase();
+            const fullName = emp.fullName.toLowerCase();
+
+            let isCorrect = false;
+            let points = 0;
+
+            // Check for matches
+            if (answer === fullName || answer === `${firstName} ${lastName}`) {
+                isCorrect = true;
+                points = 20; // Full points for full name
+            } else if (answer === firstName) {
+                isCorrect = true;
+                points = 10; // Partial points for first name only
+            } else if (answer === lastName) {
+                isCorrect = true;
+                points = 15; // Extra points for last name
+            }
+
+            recordAnswer(emp, isCorrect, points);
+        }
+
+        function recordAnswer(emp, isCorrect, points) {
+            // Update game state
+            if (isCorrect) {
+                gameState.correct++;
+            }
+            gameState.totalPoints += points;
+            gameState.results.push({
+                employeeId: emp.id,
+                correct: isCorrect,
+                points: points
+            });
+
+            // Update employee stats
+            const empStats = stats.employeeStats[emp.id];
+            if (isCorrect) {
+                empStats.correct++;
+            } else {
+                empStats.incorrect++;
+            }
+            empStats.lastSeen = Date.now();
+            empStats.lastResult = isCorrect;
+            saveData();
+
+            // Show result
+            showResult(emp, isCorrect, points);
+        }
+
+        function showResult(emp, isCorrect, points) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result ' + (isCorrect ? 'correct' : 'incorrect');
+
+            let html = isCorrect ? 'Correct!' : 'Incorrect';
+            if (!isCorrect) {
+                html += `<div class="correct-answer">The correct answer is: ${emp.fullName}</div>`;
+            }
+            if (config.gameType === 'typing' && isCorrect && points > 10) {
+                html += `<div class="points">+${points} points (bonus for full/last name)</div>`;
+            } else if (isCorrect) {
+                html += `<div class="points">+${points} points</div>`;
+            }
+            resultDiv.innerHTML = html;
+
+            // Show continue button
+            document.getElementById('continue-btn').style.display = 'inline-block';
+            document.getElementById('continue-btn').focus();
+        }
+
+        function nextCard() {
+            gameState.currentIndex++;
+
+            if (gameState.currentIndex >= gameState.currentBatch.length) {
+                endGame();
+            } else {
+                showCard();
+            }
+        }
+
+        function endGame() {
+            gameState.active = false;
+
+            // Calculate final score
+            const score = Math.round((gameState.correct / gameState.currentBatch.length) * 100);
+            const passed = score >= config.passRate;
+
+            // Save game to history
+            stats.games.unshift({
+                date: Date.now(),
+                score: score,
+                correct: gameState.correct,
+                total: gameState.currentBatch.length,
+                points: gameState.totalPoints,
+                gameType: config.gameType,
+                passed: passed
+            });
+
+            // Keep only last 50 games
+            if (stats.games.length > 50) {
+                stats.games = stats.games.slice(0, 50);
+            }
+
+            saveData();
+
+            // Show batch complete
+            document.getElementById('game-container').classList.remove('active');
+            document.getElementById('batch-complete').classList.add('active');
+
+            document.getElementById('final-score').textContent = score + '%';
+            document.getElementById('final-correct').textContent =
+                `${gameState.correct}/${gameState.currentBatch.length}`;
+            document.getElementById('final-points').textContent = gameState.totalPoints;
+
+            const passFailDiv = document.getElementById('pass-fail-result');
+            if (passed) {
+                passFailDiv.innerHTML = '<span style="color: #4a9c5d; font-weight: 700;">PASSED</span>';
+            } else {
+                passFailDiv.innerHTML = '<span style="color: #c94444; font-weight: 700;">FAILED</span>';
+            }
+        }
+
+        // Statistics UI
+        function updateStatsUI() {
+            updateAveragePerformance();
+            updateGameHistory();
+            updateEmployeeStats();
+        }
+
+        function updateAveragePerformance() {
+            const avgDiv = document.getElementById('avg-performance');
+            const lastThree = stats.games.slice(0, 3);
+
+            if (lastThree.length === 0) {
+                avgDiv.textContent = '--';
+                return;
+            }
+
+            const avg = Math.round(lastThree.reduce((sum, g) => sum + g.score, 0) / lastThree.length);
+            avgDiv.textContent = avg + '%';
+        }
+
+        function updateGameHistory() {
+            const container = document.getElementById('game-history');
+
+            if (stats.games.length === 0) {
+                container.innerHTML = '<div class="no-data">No games played yet</div>';
+                return;
+            }
+
+            container.innerHTML = stats.games.slice(0, 10).map(game => {
+                const date = new Date(game.date);
+                const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const typeLabel = game.gameType === 'multiple-choice' ? 'MC' : 'Type';
+                const passedStr = game.passed ?
+                    '<span style="color: #4a9c5d; font-weight: 600;">PASS</span>' :
+                    '<span style="color: #c94444; font-weight: 600;">FAIL</span>';
+
+                return `
+                    <div class="game-history-item">
+                        <div class="game-history-date">${dateStr}</div>
+                        <div class="game-history-stats">
+                            <span><strong>${game.score}%</strong></span>
+                            <span>${game.correct}/${game.total} correct</span>
+                            <span>${game.points} pts</span>
+                            <span>${typeLabel}</span>
+                            <span>${passedStr}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        let employeeSortColumn = 'failRate';
+        let employeeSortAsc = false;
+
+        function updateEmployeeStats() {
+            const container = document.getElementById('employee-stats');
+
+            // Prepare data
+            const data = EMPLOYEES.map(emp => {
+                const empStats = stats.employeeStats[emp.id] || { correct: 0, incorrect: 0 };
+                const total = empStats.correct + empStats.incorrect;
+                const failRate = total > 0 ? (empStats.incorrect / total) * 100 : 0;
+
+                return {
+                    id: emp.id,
+                    firstName: emp.firstName,
+                    lastName: emp.lastName,
+                    correct: empStats.correct,
+                    incorrect: empStats.incorrect,
+                    total: total,
+                    failRate: failRate
+                };
+            });
+
+            // Sort
+            data.sort((a, b) => {
+                let valA = a[employeeSortColumn];
+                let valB = b[employeeSortColumn];
+
+                if (typeof valA === 'string') {
+                    valA = valA.toLowerCase();
+                    valB = valB.toLowerCase();
+                }
+
+                if (employeeSortAsc) {
+                    return valA < valB ? -1 : valA > valB ? 1 : 0;
+                } else {
+                    return valA > valB ? -1 : valA < valB ? 1 : 0;
+                }
+            });
+
+            const sortIndicator = (col) => {
+                if (employeeSortColumn === col) {
+                    return `<span class="sort-indicator">${employeeSortAsc ? '^' : 'v'}</span>`;
+                }
+                return '';
+            };
+
+            const sortedClass = (col) => employeeSortColumn === col ? 'sorted' : '';
+
+            container.innerHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="${sortedClass('firstName')}" onclick="sortEmployees('firstName')">First Name${sortIndicator('firstName')}</th>
+                            <th class="${sortedClass('lastName')}" onclick="sortEmployees('lastName')">Last Name${sortIndicator('lastName')}</th>
+                            <th class="${sortedClass('correct')}" onclick="sortEmployees('correct')">Correct${sortIndicator('correct')}</th>
+                            <th class="${sortedClass('incorrect')}" onclick="sortEmployees('incorrect')">Wrong${sortIndicator('incorrect')}</th>
+                            <th class="${sortedClass('failRate')}" onclick="sortEmployees('failRate')">Fail Rate${sortIndicator('failRate')}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${data.map(d => {
+                            let failClass = '';
+                            if (d.total > 0) {
+                                if (d.failRate >= 50) failClass = 'fail-rate-high';
+                                else if (d.failRate >= 25) failClass = 'fail-rate-medium';
+                                else failClass = 'fail-rate-low';
+                            }
+                            return `
+                                <tr>
+                                    <td>${d.firstName}</td>
+                                    <td>${d.lastName}</td>
+                                    <td>${d.correct}</td>
+                                    <td>${d.incorrect}</td>
+                                    <td class="${failClass}">${d.total > 0 ? d.failRate.toFixed(0) + '%' : '-'}</td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        function sortEmployees(column) {
+            if (employeeSortColumn === column) {
+                employeeSortAsc = !employeeSortAsc;
+            } else {
+                employeeSortColumn = column;
+                employeeSortAsc = column === 'firstName' || column === 'lastName';
+            }
+            updateEmployeeStats();
+        }
+
+        // Keyboard handling
+        document.addEventListener('keydown', (e) => {
+            if (!gameState.active) return;
+
+            if (e.key === 'Enter') {
+                if (config.gameType === 'typing' && !gameState.answered) {
+                    submitTyping();
+                } else if (gameState.answered) {
+                    nextCard();
+                }
+            }
+        });
+
+        // Initialize
+        loadData();
+    </script>
+</body>
+</html>
