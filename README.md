@@ -1,2 +1,2 @@
 # ipaimem
-IPAI People Memory
+The IPAI Name Memorizer
