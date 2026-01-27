@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IPAI Employee Memorization</title>
+    <title>IPAI Memory</title>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         * {
@@ -254,6 +254,24 @@
             color: #666;
         }
 
+        .typing-feedback {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .typing-feedback.correct {
+            background-color: #4a9c5d;
+            color: white;
+        }
+
+        .typing-feedback.incorrect {
+            background-color: #c94444;
+            color: white;
+        }
+
         /* Result Display */
         .result {
             margin-top: 20px;
@@ -270,16 +288,6 @@
         .result.incorrect {
             background-color: #c94444;
             color: white;
-        }
-
-        .result .correct-answer {
-            margin-top: 10px;
-            font-weight: 400;
-        }
-
-        .result .points {
-            margin-top: 5px;
-            font-weight: 400;
         }
 
         .continue-btn {
@@ -462,27 +470,33 @@
 <body>
     <div class="container">
         <header>
-            <h1>IPAI Face Memory</h1>
+            <h1>IPAI Memory</h1>
         </header>
 
         <nav>
             <button id="nav-config" class="active" onclick="showSection('config')">Configuration</button>
-            <button id="nav-play" onclick="showSection('play')">Play</button>
+            <button id="nav-train" onclick="showSection('train')">Train</button>
             <button id="nav-stats" onclick="showSection('stats')">Statistics</button>
         </nav>
 
         <!-- Configuration Section -->
         <div id="config-section" class="section active">
+            <h2>About</h2>
+            <p style="margin-bottom: 20px; line-height: 1.6;">
+                IPAI Memory helps you learn and remember the faces and names of IPAI employees.
+                The game uses spaced repetition to prioritize employees you struggle with, helping
+                you improve over time. Choose between multiple choice or typing mode, and track
+                your progress with detailed statistics.
+            </p>
+            <p style="margin-bottom: 25px; line-height: 1.6; color: #666;">
+                All your progress and settings are stored locally in your browser. No data is sent to any server.
+            </p>
+
             <h2>Game Configuration</h2>
 
             <div class="form-group">
                 <label for="batch-size">Batch Size</label>
                 <input type="number" id="batch-size" min="5" max="70" value="20">
-            </div>
-
-            <div class="form-group">
-                <label for="pass-rate">Pass Rate (%)</label>
-                <input type="number" id="pass-rate" min="50" max="100" value="80">
             </div>
 
             <div class="form-group">
@@ -494,23 +508,29 @@
             </div>
 
             <button class="btn" onclick="saveConfig()">Save Configuration</button>
+            <p style="margin-top: 8px; color: #666; font-size: 12px;">
+                Configuration is saved to a local cookie in your browser.
+            </p>
 
             <div class="danger-zone">
                 <p style="margin-bottom: 10px; font-weight: 600;">Danger Zone</p>
                 <button class="btn btn-danger" onclick="resetAllData()">Reset All Data</button>
+                <p style="margin-top: 8px; color: #666; font-size: 12px;">
+                    This will delete all your game progress and statistics from this browser.
+                </p>
             </div>
         </div>
 
-        <!-- Play Section -->
-        <div id="play-section" class="section">
-            <h2>Play</h2>
+        <!-- Train Section -->
+        <div id="train-section" class="section">
+            <h2>Train</h2>
 
             <div class="config-info" id="current-config">
                 <!-- Filled by JS -->
             </div>
 
             <div id="start-game">
-                <button class="btn" onclick="startGame()">Start New Game</button>
+                <button class="btn" onclick="startGame()">Start Training</button>
             </div>
 
             <div id="game-container" class="game-container">
@@ -531,6 +551,7 @@
                     <div id="typing-mode" class="input-container" style="display: none;">
                         <input type="text" id="name-input" class="typing-input" placeholder="Type the name..." autocomplete="off">
                         <p class="input-hint">Press Enter to submit</p>
+                        <div id="typing-feedback" class="typing-feedback" style="display: none;"></div>
                     </div>
 
                     <div id="result" class="result" style="display: none;">
@@ -542,25 +563,18 @@
             </div>
 
             <div id="batch-complete" class="batch-complete">
-                <h3>Batch Complete!</h3>
+                <h3>Training Complete!</h3>
                 <div class="batch-stats">
                     <div class="batch-stat">
                         <div class="batch-stat-value" id="final-score">0%</div>
-                        <div class="batch-stat-label">Score</div>
+                        <div class="batch-stat-label">Success Rate</div>
                     </div>
                     <div class="batch-stat">
                         <div class="batch-stat-value" id="final-correct">0/0</div>
-                        <div class="batch-stat-label">Correct</div>
-                    </div>
-                    <div class="batch-stat">
-                        <div class="batch-stat-value" id="final-points">0</div>
-                        <div class="batch-stat-label">Total Points</div>
-                    </div>
-                    <div class="batch-stat">
-                        <div id="pass-fail-result"></div>
+                        <div class="batch-stat-label">Completion</div>
                     </div>
                 </div>
-                <button class="btn" onclick="startGame()">Play Again</button>
+                <button class="btn" onclick="startGame()">Train Again</button>
                 <button class="btn btn-secondary" onclick="showSection('stats')">View Statistics</button>
             </div>
         </div>
@@ -582,7 +596,7 @@
             </div>
 
             <div class="stats-card">
-                <h3>Employee Performance</h3>
+                <h3>Failure Rate by Employee</h3>
                 <div id="employee-stats">
                     <!-- Filled by JS -->
                 </div>
@@ -674,16 +688,17 @@
         // State
         let config = {
             batchSize: 20,
-            passRate: 80,
             gameType: 'multiple-choice'
         };
 
         let gameState = {
             active: false,
-            currentBatch: [],
-            currentIndex: 0,
-            correct: 0,
-            totalPoints: 0,
+            queue: [],                    // Queue of employees to ask (grows when wrong)
+            originalBatchIds: new Set(),  // IDs of original batch employees
+            correctlyAnsweredIds: new Set(), // IDs correctly answered at least once
+            currentEmployee: null,        // Current employee being shown
+            totalAttempts: 0,            // Total questions asked
+            correct: 0,                  // Correct answers on first attempt
             results: [],
             answered: false
         };
@@ -751,7 +766,6 @@
         // Update config UI
         function updateConfigUI() {
             document.getElementById('batch-size').value = config.batchSize;
-            document.getElementById('pass-rate').value = config.passRate;
             document.getElementById('game-type').value = config.gameType;
             updateCurrentConfigDisplay();
         }
@@ -765,10 +779,6 @@
                     <span><strong>${config.batchSize}</strong></span>
                 </div>
                 <div class="config-row">
-                    <span>Pass Rate:</span>
-                    <span><strong>${config.passRate}%</strong></span>
-                </div>
-                <div class="config-row">
                     <span>Game Type:</span>
                     <span><strong>${gameTypeLabel}</strong></span>
                 </div>
@@ -778,7 +788,6 @@
         // Save configuration
         function saveConfig() {
             config.batchSize = Math.min(70, Math.max(5, parseInt(document.getElementById('batch-size').value) || 20));
-            config.passRate = Math.min(100, Math.max(50, parseInt(document.getElementById('pass-rate').value) || 80));
             config.gameType = document.getElementById('game-type').value;
             saveData();
             updateConfigUI();
@@ -791,7 +800,7 @@
                 deleteCookie('ipai_config');
                 deleteCookie('ipai_stats');
                 stats = { games: [], employeeStats: {} };
-                config = { batchSize: 20, passRate: 80, gameType: 'multiple-choice' };
+                config = { batchSize: 20, gameType: 'multiple-choice' };
                 loadData();
                 updateStatsUI();
                 alert('All data has been reset.');
@@ -809,7 +818,7 @@
             if (section === 'stats') {
                 updateStatsUI();
             }
-            if (section === 'play') {
+            if (section === 'train') {
                 updateCurrentConfigDisplay();
             }
         }
@@ -877,12 +886,17 @@
 
         // Game Logic
         function startGame() {
+            const batch = selectBatch(config.batchSize);
+            const originalIds = new Set(batch.map(e => e.id));
+
             gameState = {
                 active: true,
-                currentBatch: selectBatch(config.batchSize),
-                currentIndex: 0,
+                queue: [...batch],           // Copy of batch as queue
+                originalBatchIds: originalIds,
+                correctlyAnsweredIds: new Set(),
+                currentEmployee: null,
+                totalAttempts: 0,
                 correct: 0,
-                totalPoints: 0,
                 results: [],
                 answered: false
             };
@@ -895,14 +909,18 @@
         }
 
         function showCard() {
-            const emp = gameState.currentBatch[gameState.currentIndex];
+            // Get next employee from queue
+            const emp = gameState.queue.shift();
+            gameState.currentEmployee = emp;
             gameState.answered = false;
 
-            // Update progress
-            const progress = ((gameState.currentIndex) / gameState.currentBatch.length) * 100;
+            // Update progress (based on how many correctly answered vs original batch)
+            const completed = gameState.correctlyAnsweredIds.size;
+            const total = gameState.originalBatchIds.size;
+            const progress = (completed / total) * 100;
             document.getElementById('progress-fill').style.width = progress + '%';
             document.getElementById('progress-text').textContent =
-                `Card ${gameState.currentIndex + 1} of ${gameState.currentBatch.length}`;
+                `${completed} of ${total} learned (${gameState.queue.length + 1} remaining)`;
 
             // Show image
             document.getElementById('card-image').src = emp.image;
@@ -948,13 +966,18 @@
             input.value = '';
             input.disabled = false;
             input.focus();
+
+            // Reset feedback
+            const feedback = document.getElementById('typing-feedback');
+            feedback.style.display = 'none';
+            feedback.className = 'typing-feedback';
         }
 
         function submitChoice(chosenId) {
             if (gameState.answered) return;
             gameState.answered = true;
 
-            const emp = gameState.currentBatch[gameState.currentIndex];
+            const emp = gameState.currentEmployee;
             const isCorrect = chosenId === emp.id;
 
             // Update button styles
@@ -968,8 +991,7 @@
                 }
             });
 
-            const points = isCorrect ? 10 : 0;
-            recordAnswer(emp, isCorrect, points);
+            recordAnswer(emp, isCorrect);
         }
 
         function submitTyping() {
@@ -983,42 +1005,50 @@
             gameState.answered = true;
             input.disabled = true;
 
-            const emp = gameState.currentBatch[gameState.currentIndex];
+            const emp = gameState.currentEmployee;
             const firstName = emp.firstName.toLowerCase();
             const lastName = emp.lastName.toLowerCase();
             const fullName = emp.fullName.toLowerCase();
 
-            let isCorrect = false;
-            let points = 0;
+            // Check for matches (first name, last name, or full name)
+            const isCorrect = answer === fullName ||
+                              answer === `${firstName} ${lastName}` ||
+                              answer === firstName ||
+                              answer === lastName;
 
-            // Check for matches
-            if (answer === fullName || answer === `${firstName} ${lastName}`) {
-                isCorrect = true;
-                points = 20; // Full points for full name
-            } else if (answer === firstName) {
-                isCorrect = true;
-                points = 10; // Partial points for first name only
-            } else if (answer === lastName) {
-                isCorrect = true;
-                points = 15; // Extra points for last name
-            }
+            // Show feedback with name
+            const feedback = document.getElementById('typing-feedback');
+            feedback.style.display = 'block';
+            feedback.className = 'typing-feedback ' + (isCorrect ? 'correct' : 'incorrect');
+            feedback.textContent = emp.fullName;
 
-            recordAnswer(emp, isCorrect, points);
+            recordAnswer(emp, isCorrect);
         }
 
-        function recordAnswer(emp, isCorrect, points) {
-            // Update game state
+        function recordAnswer(emp, isCorrect) {
+            gameState.totalAttempts++;
+
+            // Track correct answers on first attempt only
+            const isFirstAttempt = !gameState.correctlyAnsweredIds.has(emp.id);
+
             if (isCorrect) {
-                gameState.correct++;
+                // Mark as correctly answered
+                gameState.correctlyAnsweredIds.add(emp.id);
+                if (isFirstAttempt) {
+                    gameState.correct++;
+                }
+            } else {
+                // Re-add to queue for another attempt
+                gameState.queue.push(emp);
             }
-            gameState.totalPoints += points;
+
             gameState.results.push({
                 employeeId: emp.id,
                 correct: isCorrect,
-                points: points
+                firstAttempt: isFirstAttempt
             });
 
-            // Update employee stats
+            // Update employee stats (track all attempts)
             const empStats = stats.employeeStats[emp.id];
             if (isCorrect) {
                 empStats.correct++;
@@ -1030,34 +1060,23 @@
             saveData();
 
             // Show result
-            showResult(emp, isCorrect, points);
+            showResult(emp, isCorrect);
         }
 
-        function showResult(emp, isCorrect, points) {
+        function showResult(emp, isCorrect) {
             const resultDiv = document.getElementById('result');
             resultDiv.style.display = 'block';
             resultDiv.className = 'result ' + (isCorrect ? 'correct' : 'incorrect');
+            resultDiv.innerHTML = emp.fullName;
 
-            let html = isCorrect ? 'Correct!' : 'Incorrect';
-            if (!isCorrect) {
-                html += `<div class="correct-answer">The correct answer is: ${emp.fullName}</div>`;
-            }
-            if (config.gameType === 'typing' && isCorrect && points > 10) {
-                html += `<div class="points">+${points} points (bonus for full/last name)</div>`;
-            } else if (isCorrect) {
-                html += `<div class="points">+${points} points</div>`;
-            }
-            resultDiv.innerHTML = html;
-
-            // Show continue button
+            // Show continue button (delay focus to prevent Enter key from triggering it)
             document.getElementById('continue-btn').style.display = 'inline-block';
-            document.getElementById('continue-btn').focus();
+            setTimeout(() => document.getElementById('continue-btn').focus(), 100);
         }
 
         function nextCard() {
-            gameState.currentIndex++;
-
-            if (gameState.currentIndex >= gameState.currentBatch.length) {
+            // Check if all employees have been correctly answered
+            if (gameState.queue.length === 0) {
                 endGame();
             } else {
                 showCard();
@@ -1067,19 +1086,17 @@
         function endGame() {
             gameState.active = false;
 
-            // Calculate final score
-            const score = Math.round((gameState.correct / gameState.currentBatch.length) * 100);
-            const passed = score >= config.passRate;
+            // Calculate success rate (batch size / attempts)
+            const batchSize = gameState.originalBatchIds.size;
+            const successRate = Math.round((batchSize / gameState.totalAttempts) * 100);
 
             // Save game to history
             stats.games.unshift({
                 date: Date.now(),
-                score: score,
-                correct: gameState.correct,
-                total: gameState.currentBatch.length,
-                points: gameState.totalPoints,
-                gameType: config.gameType,
-                passed: passed
+                successRate: successRate,
+                batchSize: batchSize,
+                attempts: gameState.totalAttempts,
+                gameType: config.gameType
             });
 
             // Keep only last 50 games
@@ -1093,17 +1110,9 @@
             document.getElementById('game-container').classList.remove('active');
             document.getElementById('batch-complete').classList.add('active');
 
-            document.getElementById('final-score').textContent = score + '%';
+            document.getElementById('final-score').textContent = successRate + '%';
             document.getElementById('final-correct').textContent =
-                `${gameState.correct}/${gameState.currentBatch.length}`;
-            document.getElementById('final-points').textContent = gameState.totalPoints;
-
-            const passFailDiv = document.getElementById('pass-fail-result');
-            if (passed) {
-                passFailDiv.innerHTML = '<span style="color: #4a9c5d; font-weight: 700;">PASSED</span>';
-            } else {
-                passFailDiv.innerHTML = '<span style="color: #c94444; font-weight: 700;">FAILED</span>';
-            }
+                `${batchSize} in ${gameState.totalAttempts} attempts`;
         }
 
         // Statistics UI
@@ -1122,7 +1131,8 @@
                 return;
             }
 
-            const avg = Math.round(lastThree.reduce((sum, g) => sum + g.score, 0) / lastThree.length);
+            // Calculate average success rate
+            const avg = Math.round(lastThree.reduce((sum, g) => sum + (g.successRate || g.score || 0), 0) / lastThree.length);
             avgDiv.textContent = avg + '%';
         }
 
@@ -1130,31 +1140,44 @@
             const container = document.getElementById('game-history');
 
             if (stats.games.length === 0) {
-                container.innerHTML = '<div class="no-data">No games played yet</div>';
+                container.innerHTML = '<div class="no-data">No training sessions yet</div>';
                 return;
             }
 
-            container.innerHTML = stats.games.slice(0, 10).map(game => {
-                const date = new Date(game.date);
-                const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                const typeLabel = game.gameType === 'multiple-choice' ? 'MC' : 'Type';
-                const passedStr = game.passed ?
-                    '<span style="color: #4a9c5d; font-weight: 600;">PASS</span>' :
-                    '<span style="color: #c94444; font-weight: 600;">FAIL</span>';
+            container.innerHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date/Time</th>
+                            <th>Success Rate</th>
+                            <th>Batch</th>
+                            <th>Attempts</th>
+                            <th>Mode</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${stats.games.slice(0, 10).map(game => {
+                            const date = new Date(game.date);
+                            const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                            const typeLabel = game.gameType === 'multiple-choice' ? 'MC' : 'Type';
+                            // Support both old format (score) and new format (successRate)
+                            const successRate = game.successRate !== undefined ? game.successRate : (game.score || 0);
+                            const batchSize = game.batchSize !== undefined ? game.batchSize : (game.total || 0);
+                            const attempts = game.attempts || batchSize;
 
-                return `
-                    <div class="game-history-item">
-                        <div class="game-history-date">${dateStr}</div>
-                        <div class="game-history-stats">
-                            <span><strong>${game.score}%</strong></span>
-                            <span>${game.correct}/${game.total} correct</span>
-                            <span>${game.points} pts</span>
-                            <span>${typeLabel}</span>
-                            <span>${passedStr}</span>
-                        </div>
-                    </div>
-                `;
-            }).join('');
+                            return `
+                                <tr>
+                                    <td>${dateStr}</td>
+                                    <td><strong>${successRate}%</strong></td>
+                                    <td>${batchSize}</td>
+                                    <td>${attempts}</td>
+                                    <td>${typeLabel}</td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            `;
         }
 
         let employeeSortColumn = 'failRate';
@@ -1180,8 +1203,15 @@
                 };
             });
 
-            // Sort
+            // Sort (keep employees with no data at bottom when sorting by failRate)
             data.sort((a, b) => {
+                // When sorting by failRate, keep no-data employees at the bottom
+                if (employeeSortColumn === 'failRate') {
+                    if (a.total === 0 && b.total === 0) return 0;
+                    if (a.total === 0) return 1;  // a goes to bottom
+                    if (b.total === 0) return -1; // b goes to bottom
+                }
+
                 let valA = a[employeeSortColumn];
                 let valB = b[employeeSortColumn];
 
@@ -1255,6 +1285,7 @@
             if (!gameState.active) return;
 
             if (e.key === 'Enter') {
+                e.preventDefault();
                 if (config.gameType === 'typing' && !gameState.answered) {
                     submitTyping();
                 } else if (gameState.answered) {
