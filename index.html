@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IPAI Employee Memorization</title>
+    <title>IPAI Memory</title>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         * {
@@ -462,7 +462,7 @@
 <body>
     <div class="container">
         <header>
-            <h1>IPAI Face Memory</h1>
+            <h1>IPAI Memory</h1>
         </header>
 
         <nav>
@@ -473,16 +473,22 @@
 
         <!-- Configuration Section -->
         <div id="config-section" class="section active">
+            <h2>About</h2>
+            <p style="margin-bottom: 20px; line-height: 1.6;">
+                IPAI Memory helps you learn and remember the faces and names of IPAI employees.
+                The game uses spaced repetition to prioritize employees you struggle with, helping
+                you improve over time. Choose between multiple choice or typing mode, and track
+                your progress with detailed statistics.
+            </p>
+            <p style="margin-bottom: 25px; line-height: 1.6; color: #666;">
+                All your progress and settings are stored locally in your browser. No data is sent to any server.
+            </p>
+
             <h2>Game Configuration</h2>
 
             <div class="form-group">
                 <label for="batch-size">Batch Size</label>
                 <input type="number" id="batch-size" min="5" max="70" value="20">
-            </div>
-
-            <div class="form-group">
-                <label for="pass-rate">Pass Rate (%)</label>
-                <input type="number" id="pass-rate" min="50" max="100" value="80">
             </div>
 
             <div class="form-group">
@@ -494,10 +500,16 @@
             </div>
 
             <button class="btn" onclick="saveConfig()">Save Configuration</button>
+            <p style="margin-top: 8px; color: #666; font-size: 12px;">
+                Configuration is saved to a local cookie in your browser.
+            </p>
 
             <div class="danger-zone">
                 <p style="margin-bottom: 10px; font-weight: 600;">Danger Zone</p>
                 <button class="btn btn-danger" onclick="resetAllData()">Reset All Data</button>
+                <p style="margin-top: 8px; color: #666; font-size: 12px;">
+                    This will delete all your game progress and statistics from this browser.
+                </p>
             </div>
         </div>
 
@@ -555,9 +567,6 @@
                     <div class="batch-stat">
                         <div class="batch-stat-value" id="final-points">0</div>
                         <div class="batch-stat-label">Total Points</div>
-                    </div>
-                    <div class="batch-stat">
-                        <div id="pass-fail-result"></div>
                     </div>
                 </div>
                 <button class="btn" onclick="startGame()">Play Again</button>
@@ -674,7 +683,6 @@
         // State
         let config = {
             batchSize: 20,
-            passRate: 80,
             gameType: 'multiple-choice'
         };
 
@@ -751,7 +759,6 @@
         // Update config UI
         function updateConfigUI() {
             document.getElementById('batch-size').value = config.batchSize;
-            document.getElementById('pass-rate').value = config.passRate;
             document.getElementById('game-type').value = config.gameType;
             updateCurrentConfigDisplay();
         }
@@ -765,10 +772,6 @@
                     <span><strong>${config.batchSize}</strong></span>
                 </div>
                 <div class="config-row">
-                    <span>Pass Rate:</span>
-                    <span><strong>${config.passRate}%</strong></span>
-                </div>
-                <div class="config-row">
                     <span>Game Type:</span>
                     <span><strong>${gameTypeLabel}</strong></span>
                 </div>
@@ -778,7 +781,6 @@
         // Save configuration
         function saveConfig() {
             config.batchSize = Math.min(70, Math.max(5, parseInt(document.getElementById('batch-size').value) || 20));
-            config.passRate = Math.min(100, Math.max(50, parseInt(document.getElementById('pass-rate').value) || 80));
             config.gameType = document.getElementById('game-type').value;
             saveData();
             updateConfigUI();
@@ -791,7 +793,7 @@
                 deleteCookie('ipai_config');
                 deleteCookie('ipai_stats');
                 stats = { games: [], employeeStats: {} };
-                config = { batchSize: 20, passRate: 80, gameType: 'multiple-choice' };
+                config = { batchSize: 20, gameType: 'multiple-choice' };
                 loadData();
                 updateStatsUI();
                 alert('All data has been reset.');
@@ -1069,7 +1071,6 @@
 
             // Calculate final score
             const score = Math.round((gameState.correct / gameState.currentBatch.length) * 100);
-            const passed = score >= config.passRate;
 
             // Save game to history
             stats.games.unshift({
@@ -1078,8 +1079,7 @@
                 correct: gameState.correct,
                 total: gameState.currentBatch.length,
                 points: gameState.totalPoints,
-                gameType: config.gameType,
-                passed: passed
+                gameType: config.gameType
             });
 
             // Keep only last 50 games
@@ -1097,13 +1097,6 @@
             document.getElementById('final-correct').textContent =
                 `${gameState.correct}/${gameState.currentBatch.length}`;
             document.getElementById('final-points').textContent = gameState.totalPoints;
-
-            const passFailDiv = document.getElementById('pass-fail-result');
-            if (passed) {
-                passFailDiv.innerHTML = '<span style="color: #4a9c5d; font-weight: 700;">PASSED</span>';
-            } else {
-                passFailDiv.innerHTML = '<span style="color: #c94444; font-weight: 700;">FAILED</span>';
-            }
         }
 
         // Statistics UI
@@ -1138,9 +1131,6 @@
                 const date = new Date(game.date);
                 const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                 const typeLabel = game.gameType === 'multiple-choice' ? 'MC' : 'Type';
-                const passedStr = game.passed ?
-                    '<span style="color: #4a9c5d; font-weight: 600;">PASS</span>' :
-                    '<span style="color: #c94444; font-weight: 600;">FAIL</span>';
 
                 return `
                     <div class="game-history-item">
@@ -1150,7 +1140,6 @@
                             <span>${game.correct}/${game.total} correct</span>
                             <span>${game.points} pts</span>
                             <span>${typeLabel}</span>
-                            <span>${passedStr}</span>
                         </div>
                     </div>
                 `;
