@@ -466,6 +466,44 @@
             justify-content: flex-end;
         }
 
+        .config-control input,
+        .config-control select {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            padding: 12px 16px;
+            border: none;
+            border-radius: 8px;
+            background-color: white;
+            color: black;
+            min-width: 180px;
+            transition: outline 0.2s;
+        }
+
+        .config-control input:focus,
+        .config-control select:focus {
+            outline: 2px solid #d46e31;
+        }
+
+        .config-control input[type="number"] {
+            text-align: center;
+            -moz-appearance: textfield;
+        }
+
+        .config-control input[type="number"]::-webkit-outer-spin-button,
+        .config-control input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .config-control select {
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 36px;
+        }
+
         /* Reset Button */
         .danger-zone {
             margin-top: 30px;
@@ -481,8 +519,22 @@
             background-color: #b33a3a;
         }
 
+        /* Table wrapper for responsive scrolling */
+        .table-wrapper {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
         /* Responsive */
         @media (max-width: 600px) {
+            .container {
+                padding: 12px;
+            }
+
+            header h1 {
+                font-size: 18px;
+            }
+
             .card-image {
                 width: 150px;
                 height: 150px;
@@ -493,9 +545,18 @@
                 align-items: stretch;
             }
 
+            nav button {
+                padding: 10px 12px;
+                font-size: 13px;
+            }
+
             .nav-group {
                 justify-content: center;
                 flex-wrap: wrap;
+            }
+
+            .section {
+                padding: 16px;
             }
 
             .game-history-stats {
@@ -513,6 +574,112 @@
 
             .config-control {
                 justify-content: flex-start;
+                width: 100%;
+            }
+
+            .config-control input,
+            .config-control select {
+                width: 100%;
+                min-width: unset;
+            }
+
+            /* Stats table responsive */
+            .stats-card {
+                padding: 12px;
+            }
+
+            table {
+                font-size: 12px;
+            }
+
+            th, td {
+                padding: 8px 6px;
+            }
+
+            .certificate-btn {
+                padding: 4px 8px;
+                font-size: 11px;
+            }
+
+            .avg-performance {
+                font-size: 24px;
+            }
+
+            .btn {
+                padding: 10px 16px;
+                font-size: 13px;
+            }
+
+            .choices {
+                max-width: 100%;
+            }
+
+            .choice-btn {
+                padding: 12px;
+                font-size: 13px;
+            }
+
+            .typing-input {
+                max-width: 100%;
+                font-size: 14px;
+            }
+
+            .batch-stats {
+                padding: 15px;
+            }
+
+            .batch-stat-value {
+                font-size: 20px;
+            }
+        }
+
+        /* Very small screens */
+        @media (max-width: 400px) {
+            .container {
+                padding: 8px;
+            }
+
+            header h1 {
+                font-size: 16px;
+            }
+
+            .section {
+                padding: 12px;
+                border-radius: 8px;
+            }
+
+            nav button {
+                padding: 8px 10px;
+                font-size: 12px;
+            }
+
+            table {
+                font-size: 11px;
+            }
+
+            th, td {
+                padding: 6px 4px;
+            }
+
+            .stats-card h3 {
+                font-size: 14px;
+            }
+
+            .avg-performance {
+                font-size: 20px;
+            }
+
+            .choice-btn {
+                padding: 10px;
+                font-size: 12px;
+            }
+
+            .batch-stat-value {
+                font-size: 18px;
+            }
+
+            .card {
+                padding: 20px;
             }
         }
     </style>
@@ -1494,38 +1661,40 @@
             }
 
             container.innerHTML = `
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Date/Time</th>
-                            <th>Success Rate</th>
-                            <th>Batch</th>
-                            <th>Attempts</th>
-                            <th>Mode</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${stats.games.slice(0, 10).map(game => {
-                            const date = new Date(game.date);
-                            const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                            const typeLabel = game.gameType === 'multiple-choice' ? 'MC' : 'Type';
-                            // Support both old format (score) and new format (successRate)
-                            const successRate = game.successRate !== undefined ? game.successRate : (game.score || 0);
-                            const batchSize = game.batchSize !== undefined ? game.batchSize : (game.total || 0);
-                            const attempts = game.attempts || batchSize;
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date/Time</th>
+                                <th>Success Rate</th>
+                                <th>Batch</th>
+                                <th>Attempts</th>
+                                <th>Mode</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${stats.games.slice(0, 10).map(game => {
+                                const date = new Date(game.date);
+                                const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                const typeLabel = game.gameType === 'multiple-choice' ? 'MC' : 'Type';
+                                // Support both old format (score) and new format (successRate)
+                                const successRate = game.successRate !== undefined ? game.successRate : (game.score || 0);
+                                const batchSize = game.batchSize !== undefined ? game.batchSize : (game.total || 0);
+                                const attempts = game.attempts || batchSize;
 
-                            return `
-                                <tr>
-                                    <td>${dateStr}</td>
-                                    <td><strong>${successRate}%</strong></td>
-                                    <td>${batchSize}</td>
-                                    <td>${attempts}</td>
-                                    <td>${typeLabel}</td>
-                                </tr>
-                            `;
-                        }).join('')}
-                    </tbody>
-                </table>
+                                return `
+                                    <tr>
+                                        <td>${dateStr}</td>
+                                        <td><strong>${successRate}%</strong></td>
+                                        <td>${batchSize}</td>
+                                        <td>${attempts}</td>
+                                        <td>${typeLabel}</td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
             `;
         }
 
@@ -1538,34 +1707,36 @@
             }
 
             container.innerHTML = `
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Date/Time</th>
-                            <th>Score</th>
-                            <th>Correct</th>
-                            <th>Mode</th>
-                            <th>Certificate</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${stats.tests.slice(0, 10).map((test, index) => {
-                            const date = new Date(test.date);
-                            const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                            const typeLabel = test.gameType === 'multiple-choice' ? 'MC' : 'Type';
-                            const score = test.score !== undefined ? test.score : Math.round((test.correct / test.total) * 100);
-                            return `
-                                <tr>
-                                    <td>${dateStr}</td>
-                                    <td><strong>${score}%</strong></td>
-                                    <td>${test.correct}/${test.total}</td>
-                                    <td>${typeLabel}</td>
-                                    <td><button class="btn btn-secondary certificate-btn" onclick="downloadTestCertificate(${index})">Download PDF</button></td>
-                                </tr>
-                            `;
-                        }).join('')}
-                    </tbody>
-                </table>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date/Time</th>
+                                <th>Score</th>
+                                <th>Correct</th>
+                                <th>Mode</th>
+                                <th>Certificate</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${stats.tests.slice(0, 10).map((test, index) => {
+                                const date = new Date(test.date);
+                                const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                const typeLabel = test.gameType === 'multiple-choice' ? 'MC' : 'Type';
+                                const score = test.score !== undefined ? test.score : Math.round((test.correct / test.total) * 100);
+                                return `
+                                    <tr>
+                                        <td>${dateStr}</td>
+                                        <td><strong>${score}%</strong></td>
+                                        <td>${test.correct}/${test.total}</td>
+                                        <td>${typeLabel}</td>
+                                        <td><button class="btn btn-secondary certificate-btn" onclick="downloadTestCertificate(${index})">Download PDF</button></td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
             `;
         }
 
@@ -1626,36 +1797,38 @@
             const sortedClass = (col) => employeeSortColumn === col ? 'sorted' : '';
 
             container.innerHTML = `
-                <table>
-                    <thead>
-                        <tr>
-                            <th class="${sortedClass('firstName')}" onclick="sortEmployees('firstName')">First Name${sortIndicator('firstName')}</th>
-                            <th class="${sortedClass('lastName')}" onclick="sortEmployees('lastName')">Last Name${sortIndicator('lastName')}</th>
-                            <th class="${sortedClass('correct')}" onclick="sortEmployees('correct')">Correct${sortIndicator('correct')}</th>
-                            <th class="${sortedClass('incorrect')}" onclick="sortEmployees('incorrect')">Wrong${sortIndicator('incorrect')}</th>
-                            <th class="${sortedClass('failRate')}" onclick="sortEmployees('failRate')">Fail Rate${sortIndicator('failRate')}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${data.map(d => {
-                            let failClass = '';
-                            if (d.total > 0) {
-                                if (d.failRate >= 50) failClass = 'fail-rate-high';
-                                else if (d.failRate >= 25) failClass = 'fail-rate-medium';
-                                else failClass = 'fail-rate-low';
-                            }
-                            return `
-                                <tr>
-                                    <td>${d.firstName}</td>
-                                    <td>${d.lastName}</td>
-                                    <td>${d.correct}</td>
-                                    <td>${d.incorrect}</td>
-                                    <td class="${failClass}">${d.total > 0 ? d.failRate.toFixed(0) + '%' : '-'}</td>
-                                </tr>
-                            `;
-                        }).join('')}
-                    </tbody>
-                </table>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="${sortedClass('firstName')}" onclick="sortEmployees('firstName')">First Name${sortIndicator('firstName')}</th>
+                                <th class="${sortedClass('lastName')}" onclick="sortEmployees('lastName')">Last Name${sortIndicator('lastName')}</th>
+                                <th class="${sortedClass('correct')}" onclick="sortEmployees('correct')">Correct${sortIndicator('correct')}</th>
+                                <th class="${sortedClass('incorrect')}" onclick="sortEmployees('incorrect')">Wrong${sortIndicator('incorrect')}</th>
+                                <th class="${sortedClass('failRate')}" onclick="sortEmployees('failRate')">Fail Rate${sortIndicator('failRate')}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${data.map(d => {
+                                let failClass = '';
+                                if (d.total > 0) {
+                                    if (d.failRate >= 50) failClass = 'fail-rate-high';
+                                    else if (d.failRate >= 25) failClass = 'fail-rate-medium';
+                                    else failClass = 'fail-rate-low';
+                                }
+                                return `
+                                    <tr>
+                                        <td>${d.firstName}</td>
+                                        <td>${d.lastName}</td>
+                                        <td>${d.correct}</td>
+                                        <td>${d.incorrect}</td>
+                                        <td class="${failClass}">${d.total > 0 ? d.failRate.toFixed(0) + '%' : '-'}</td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
             `;
         }
 
