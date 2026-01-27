@@ -294,6 +294,57 @@
             color: white;
         }
 
+        /* Inverse Mode */
+        .inverse-prompt {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .face-choices {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            max-width: 450px;
+            margin: 0 auto;
+        }
+
+        .face-choice-btn {
+            border: 4px solid transparent;
+            border-radius: 12px;
+            cursor: pointer;
+            background-color: white;
+            padding: 10px;
+            transition: all 0.2s;
+        }
+
+        .face-choice-btn:hover:not(:disabled) {
+            border-color: #d46e31;
+        }
+
+        .face-choice-btn img {
+            width: 100%;
+            aspect-ratio: 1;
+            border-radius: 8px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .face-choice-btn.correct {
+            border-color: #4a9c5d;
+            background-color: #e8f5e9;
+        }
+
+        .face-choice-btn.incorrect {
+            border-color: #c94444;
+            background-color: #ffebee;
+        }
+
+        .face-choice-btn:disabled {
+            cursor: default;
+        }
+
         /* Result Display */
         .result {
             margin-top: 20px;
@@ -647,6 +698,19 @@
             .batch-stat-value {
                 font-size: 20px;
             }
+
+            .face-choices {
+                max-width: 100%;
+                gap: 10px;
+            }
+
+            .face-choice-btn {
+                padding: 6px;
+            }
+
+            .inverse-prompt {
+                font-size: 20px;
+            }
         }
 
         /* Very small screens */
@@ -697,6 +761,20 @@
             .card {
                 padding: 20px;
             }
+
+            .face-choices {
+                gap: 8px;
+            }
+
+            .face-choice-btn {
+                padding: 4px;
+                border-width: 3px;
+            }
+
+            .inverse-prompt {
+                font-size: 18px;
+                margin-bottom: 15px;
+            }
         }
     </style>
 </head>
@@ -724,7 +802,7 @@
             <p style="margin-bottom: 20px; line-height: 1.6;">
                 IPAI Master Socialite helps you learn and remember the faces and names of IPAI employees.
                 The game uses repetition to prioritize people whose names you struggle with, helping
-                you improve over time. Choose between multiple choice or typing mode, and track
+                you improve over time. Choose between multiple choice, typing, or inverse mode, and track
                 your progress with detailed statistics.
             </p>
             <p style="margin-bottom: 20px; line-height: 1.6;">
@@ -763,15 +841,16 @@
                     <div class="config-details">
                         <h3>Game Type</h3>
                         <p>
-                            Select how you want to answer each prompt. Multiple choice is faster and helps with
-                            recognition, while typing the name requires recall and reinforces long-term memory.
-                            You can switch at any time.
+                            Select how you want to answer each prompt. Multiple choice shows a face and asks you to pick the name.
+                            Typing requires you to recall and type the name. Inverse shows a name and asks you to pick the correct face
+                            from four options. You can switch at any time.
                         </p>
                     </div>
                     <div class="config-control">
                         <select id="game-type">
                             <option value="multiple-choice">Multiple Choice</option>
                             <option value="typing">Type the Name</option>
+                            <option value="inverse">Inverse</option>
                         </select>
                     </div>
                 </div>
@@ -836,6 +915,14 @@
                                 <input type="text" id="name-input" class="typing-input" placeholder="Type the name..." autocomplete="off">
                                 <p class="input-hint">Press Enter to submit</p>
                                 <div id="typing-feedback" class="typing-feedback" style="display: none;"></div>
+                            </div>
+
+                            <!-- Inverse Mode -->
+                            <div id="inverse-mode" style="display: none;">
+                                <div id="inverse-prompt" class="inverse-prompt"></div>
+                                <div id="face-choices" class="face-choices">
+                                    <!-- Filled by JS -->
+                                </div>
                             </div>
 
                             <div id="result" class="result" style="display: none;">
@@ -1130,7 +1217,12 @@
             if (!configInfo) {
                 return;
             }
-            const gameTypeLabel = config.gameType === 'multiple-choice' ? 'Multiple Choice' : 'Type the Name';
+            const gameTypeLabels = {
+                'multiple-choice': 'Multiple Choice',
+                'typing': 'Type the Name',
+                'inverse': 'Inverse'
+            };
+            const gameTypeLabel = gameTypeLabels[config.gameType] || 'Multiple Choice';
             configInfo.innerHTML = `
                 <div class="config-row">
                     <span>Batch Size:</span>
@@ -1360,24 +1452,31 @@
                 ? `Question ${completed + 1} of ${total}`
                 : `${completed} of ${total} learned (${gameState.queue.length + 1} remaining)`;
 
-            // Show image
-            document.getElementById('card-image').src = emp.image;
-
             // Hide result and continue button
             document.getElementById('result').style.display = 'none';
             document.getElementById('continue-btn').style.display = 'none';
 
             // Setup game mode
-            if (config.gameType === 'multiple-choice') {
-                setupMultipleChoice(emp);
+            if (config.gameType === 'inverse') {
+                // Hide the card image for inverse mode (we show faces as choices)
+                document.getElementById('card-image').style.display = 'none';
+                setupInverseMode(emp);
             } else {
-                setupTypingMode(emp);
+                // Show image for other modes
+                document.getElementById('card-image').style.display = 'block';
+                document.getElementById('card-image').src = emp.image;
+                if (config.gameType === 'multiple-choice') {
+                    setupMultipleChoice(emp);
+                } else {
+                    setupTypingMode(emp);
+                }
             }
         }
 
         function setupMultipleChoice(correctEmp) {
             document.getElementById('multiple-choice-mode').style.display = 'flex';
             document.getElementById('typing-mode').style.display = 'none';
+            document.getElementById('inverse-mode').style.display = 'none';
 
             // Get 2 random wrong answers
             const otherEmps = EMPLOYEES.filter(e => e.id !== correctEmp.id);
@@ -1399,6 +1498,7 @@
         function setupTypingMode(emp) {
             document.getElementById('multiple-choice-mode').style.display = 'none';
             document.getElementById('typing-mode').style.display = 'block';
+            document.getElementById('inverse-mode').style.display = 'none';
 
             const input = document.getElementById('name-input');
             input.value = '';
@@ -1409,6 +1509,31 @@
             const feedback = document.getElementById('typing-feedback');
             feedback.style.display = 'none';
             feedback.className = 'typing-feedback';
+        }
+
+        function setupInverseMode(correctEmp) {
+            document.getElementById('multiple-choice-mode').style.display = 'none';
+            document.getElementById('typing-mode').style.display = 'none';
+            document.getElementById('inverse-mode').style.display = 'block';
+
+            // Show the employee's name as the prompt
+            document.getElementById('inverse-prompt').textContent = correctEmp.fullName;
+
+            // Get 3 random wrong answers
+            const otherEmps = EMPLOYEES.filter(e => e.id !== correctEmp.id);
+            const shuffled = otherEmps.sort(() => Math.random() - 0.5);
+            const wrongAnswers = shuffled.slice(0, 3);
+
+            // Combine and shuffle all 4 options
+            const choices = [correctEmp, ...wrongAnswers].sort(() => Math.random() - 0.5);
+
+            // Render face buttons
+            const container = document.getElementById('face-choices');
+            container.innerHTML = choices.map(emp => `
+                <button class="face-choice-btn" data-id="${emp.id}" onclick="submitInverse(${emp.id})">
+                    <img src="${emp.image}" alt="Employee photo">
+                </button>
+            `).join('');
         }
 
         function submitChoice(chosenId) {
@@ -1465,6 +1590,30 @@
                 feedback.className = 'typing-feedback ' + (isCorrect ? 'correct' : 'incorrect');
                 feedback.textContent = emp.fullName;
             }
+
+            recordAnswer(emp, isCorrect);
+        }
+
+        function submitInverse(chosenId) {
+            if (gameState.answered) return;
+            gameState.answered = true;
+
+            const emp = gameState.currentEmployee;
+            const isCorrect = chosenId === emp.id;
+            const isTest = gameState.mode === 'test';
+
+            // Update button styles
+            document.querySelectorAll('.face-choice-btn').forEach(btn => {
+                btn.disabled = true;
+                const btnId = parseInt(btn.dataset.id);
+                if (!isTest) {
+                    if (btnId === emp.id) {
+                        btn.classList.add('correct');
+                    } else if (btnId === chosenId && !isCorrect) {
+                        btn.classList.add('incorrect');
+                    }
+                }
+            });
 
             recordAnswer(emp, isCorrect);
         }
@@ -1707,7 +1856,8 @@
                             ${stats.games.slice(0, 10).map(game => {
                                 const date = new Date(game.date);
                                 const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                                const typeLabel = game.gameType === 'multiple-choice' ? 'MC' : 'Type';
+                                const typeLabels = { 'multiple-choice': 'MC', 'typing': 'Type', 'inverse': 'Inv' };
+                                const typeLabel = typeLabels[game.gameType] || 'MC';
                                 // Support both old format (score) and new format (successRate)
                                 const successRate = game.successRate !== undefined ? game.successRate : (game.score || 0);
                                 const batchSize = game.batchSize !== undefined ? game.batchSize : (game.total || 0);
@@ -1753,7 +1903,8 @@
                             ${stats.tests.slice(0, 10).map((test, index) => {
                                 const date = new Date(test.date);
                                 const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                                const typeLabel = test.gameType === 'multiple-choice' ? 'MC' : 'Type';
+                                const typeLabels = { 'multiple-choice': 'MC', 'typing': 'Type', 'inverse': 'Inv' };
+                                const typeLabel = typeLabels[test.gameType] || 'MC';
                                 const score = test.score !== undefined ? test.score : Math.round((test.correct / test.total) * 100);
                                 return `
                                     <tr>
