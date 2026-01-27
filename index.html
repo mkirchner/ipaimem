@@ -1107,9 +1107,9 @@
             }
             resultDiv.innerHTML = html;
 
-            // Show continue button
+            // Show continue button (delay focus to prevent Enter key from triggering it)
             document.getElementById('continue-btn').style.display = 'inline-block';
-            document.getElementById('continue-btn').focus();
+            setTimeout(() => document.getElementById('continue-btn').focus(), 100);
         }
 
         function nextCard() {
@@ -1302,6 +1302,7 @@
             if (!gameState.active) return;
 
             if (e.key === 'Enter') {
+                e.preventDefault();
                 if (config.gameType === 'typing' && !gameState.answered) {
                     submitTyping();
                 } else if (gameState.answered) {
