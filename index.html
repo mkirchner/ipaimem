@@ -597,12 +597,12 @@
                     <div class="config-details">
                         <h3>Your Name</h3>
                         <p>
-                            Add the name you'd like printed on test certificates. This is stored locally
-                            and can be updated anytime.
+                            Add your name to personalize the learning experience.
+                            This stays on your device only.
                         </p>
                     </div>
                     <div class="config-control">
-                        <input type="text" id="user-name" placeholder="Enter your name">
+                        <input type="text" id="user-name" placeholder="Enter your name" maxlength="60">
                     </div>
                 </div>
             </div>
@@ -906,10 +906,7 @@
         function updateConfigUI() {
             document.getElementById('batch-size').value = config.batchSize;
             document.getElementById('game-type').value = config.gameType;
-            const nameInput = document.getElementById('user-name');
-            if (nameInput) {
-                nameInput.value = config.userName || '';
-            }
+            document.getElementById('user-name').value = config.userName || '';
             updateCurrentConfigDisplay();
         }
 
@@ -934,6 +931,10 @@
                 <div class="config-row">
                     <span>Game Type:</span>
                     <span><strong>${gameTypeLabel}</strong></span>
+                </div>
+                <div class="config-row">
+                    <span>Your Name:</span>
+                    <span><strong>${config.userName || '—'}</strong></span>
                 </div>
             `;
         }
