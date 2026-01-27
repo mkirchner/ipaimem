@@ -39,9 +39,15 @@
 
         nav {
             display: flex;
-            justify-content: center;
+            justify-content: space-between;
+            align-items: center;
             gap: 10px;
             margin-bottom: 30px;
+        }
+
+        .nav-group {
+            display: flex;
+            gap: 10px;
         }
 
         nav button {
@@ -457,6 +463,12 @@
             }
 
             nav {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .nav-group {
+                justify-content: center;
                 flex-wrap: wrap;
             }
 
@@ -474,9 +486,14 @@
         </header>
 
         <nav>
-            <button id="nav-config" class="active" onclick="showSection('config')">Configuration</button>
-            <button id="nav-train" onclick="showSection('train')">Train</button>
-            <button id="nav-stats" onclick="showSection('stats')">Statistics</button>
+            <div class="nav-group nav-left">
+                <button id="nav-train" onclick="showSection('train')">Train</button>
+                <button id="nav-test" onclick="showSection('test')">Test</button>
+            </div>
+            <div class="nav-group nav-right">
+                <button id="nav-stats" onclick="showSection('stats')">Statistics</button>
+                <button id="nav-config" class="active" onclick="showSection('config')">Configuration</button>
+            </div>
         </nav>
 
         <!-- Configuration Section -->
@@ -525,10 +542,6 @@
         <div id="train-section" class="section">
             <h2>Train</h2>
 
-            <div class="config-info" id="current-config">
-                <!-- Filled by JS -->
-            </div>
-
             <div id="start-game">
                 <button class="btn" onclick="startGame()">Start Training</button>
             </div>
@@ -538,6 +551,9 @@
                 <div class="progress-bar">
                     <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
                 </div>
+                <button id="cancel-training" class="btn btn-secondary" onclick="cancelTraining()" style="margin-bottom: 20px; display: none;">
+                    Cancel Training
+                </button>
 
                 <div class="card">
                     <img id="card-image" class="card-image" src="" alt="Employee photo">
@@ -708,6 +724,8 @@
             employeeStats: {}
         };
 
+        let statsBeforeGame = null;
+
         // Cookie helpers
         function setCookie(name, value, days = 365) {
             const expires = new Date(Date.now() + days * 864e5).toUTCString();
@@ -772,6 +790,9 @@
 
         function updateCurrentConfigDisplay() {
             const configInfo = document.getElementById('current-config');
+            if (!configInfo) {
+                return;
+            }
             const gameTypeLabel = config.gameType === 'multiple-choice' ? 'Multiple Choice' : 'Type the Name';
             configInfo.innerHTML = `
                 <div class="config-row">
@@ -809,27 +830,34 @@
 
         // Navigation
         function showSection(section) {
+            const wasTrainActive = document.getElementById('train-section').classList.contains('active');
+
             document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
             document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
 
-            document.getElementById(section + '-section').classList.add('active');
+            const targetSection = section === 'test' ? 'train' : section;
+            document.getElementById(targetSection + '-section').classList.add('active');
             document.getElementById('nav-' + section).classList.add('active');
+
+            if (wasTrainActive && !gameState.active) {
+                resetTrainingUI();
+            }
 
             if (section === 'stats') {
                 updateStatsUI();
             }
-            if (section === 'train') {
-                updateCurrentConfigDisplay();
+            if (section === 'train' || section === 'test') {
+                updateTrainingView();
             }
         }
 
         // Spaced Repetition Algorithm
         function calculatePriority(empId) {
             const empStats = stats.employeeStats[empId];
-            if (!empStats) return 1000; // New employee, high priority
+            if (!empStats) return 1000 + Math.random() * 200; // New employee, high priority
 
             const total = empStats.correct + empStats.incorrect;
-            if (total === 0) return 1000; // Never seen, high priority
+            if (total === 0) return 1000 + Math.random() * 200; // Never seen, high priority
 
             // Calculate fail rate (0-1)
             const failRate = empStats.incorrect / total;
@@ -886,6 +914,7 @@
 
         // Game Logic
         function startGame() {
+            statsBeforeGame = JSON.parse(JSON.stringify(stats));
             const batch = selectBatch(config.batchSize);
             const originalIds = new Set(batch.map(e => e.id));
 
@@ -904,6 +933,7 @@
             document.getElementById('start-game').style.display = 'none';
             document.getElementById('game-container').classList.add('active');
             document.getElementById('batch-complete').classList.remove('active');
+            document.getElementById('cancel-training').style.display = 'inline-block';
 
             showCard();
         }
@@ -1065,9 +1095,9 @@
 
         function showResult(emp, isCorrect) {
             const resultDiv = document.getElementById('result');
-            resultDiv.style.display = 'block';
-            resultDiv.className = 'result ' + (isCorrect ? 'correct' : 'incorrect');
-            resultDiv.innerHTML = emp.fullName;
+            resultDiv.style.display = 'none';
+            resultDiv.className = 'result';
+            resultDiv.innerHTML = '';
 
             // Show continue button (delay focus to prevent Enter key from triggering it)
             document.getElementById('continue-btn').style.display = 'inline-block';
@@ -1085,6 +1115,7 @@
 
         function endGame() {
             gameState.active = false;
+            statsBeforeGame = null;
 
             // Calculate success rate (batch size / attempts)
             const batchSize = gameState.originalBatchIds.size;
@@ -1109,10 +1140,56 @@
             // Show batch complete
             document.getElementById('game-container').classList.remove('active');
             document.getElementById('batch-complete').classList.add('active');
+            document.getElementById('cancel-training').style.display = 'none';
 
             document.getElementById('final-score').textContent = successRate + '%';
             document.getElementById('final-correct').textContent =
                 `${batchSize} in ${gameState.totalAttempts} attempts`;
+        }
+
+        function cancelTraining() {
+            if (!gameState.active) return;
+            const shouldCancel = confirm('Cancel this training run? Your progress in this session will be lost.');
+            if (!shouldCancel) return;
+
+            if (statsBeforeGame) {
+                stats = JSON.parse(JSON.stringify(statsBeforeGame));
+                saveData();
+                updateStatsUI();
+            }
+
+            gameState = {
+                active: false,
+                queue: [],
+                originalBatchIds: new Set(),
+                correctlyAnsweredIds: new Set(),
+                currentEmployee: null,
+                totalAttempts: 0,
+                correct: 0,
+                results: [],
+                answered: false
+            };
+            statsBeforeGame = null;
+
+            resetTrainingUI();
+        }
+
+        function resetTrainingUI() {
+            document.getElementById('game-container').classList.remove('active');
+            document.getElementById('batch-complete').classList.remove('active');
+            document.getElementById('start-game').style.display = 'block';
+            document.getElementById('cancel-training').style.display = 'none';
+        }
+
+        function updateTrainingView() {
+            if (gameState.active) {
+                document.getElementById('start-game').style.display = 'none';
+                document.getElementById('game-container').classList.add('active');
+                document.getElementById('cancel-training').style.display = 'inline-block';
+                document.getElementById('batch-complete').classList.remove('active');
+            } else {
+                resetTrainingUI();
+            }
         }
 
         // Statistics UI
