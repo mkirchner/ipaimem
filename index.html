@@ -290,16 +290,6 @@
             color: white;
         }
 
-        .result .correct-answer {
-            margin-top: 10px;
-            font-weight: 400;
-        }
-
-        .result .points {
-            margin-top: 5px;
-            font-weight: 400;
-        }
-
         .continue-btn {
             margin-top: 20px;
         }
@@ -577,15 +567,11 @@
                 <div class="batch-stats">
                     <div class="batch-stat">
                         <div class="batch-stat-value" id="final-score">0%</div>
-                        <div class="batch-stat-label">Score</div>
+                        <div class="batch-stat-label">Success Rate</div>
                     </div>
                     <div class="batch-stat">
                         <div class="batch-stat-value" id="final-correct">0/0</div>
-                        <div class="batch-stat-label">Correct</div>
-                    </div>
-                    <div class="batch-stat">
-                        <div class="batch-stat-value" id="final-points">0</div>
-                        <div class="batch-stat-label">Total Points</div>
+                        <div class="batch-stat-label">Completion</div>
                     </div>
                 </div>
                 <button class="btn" onclick="startGame()">Train Again</button>
@@ -610,7 +596,7 @@
             </div>
 
             <div class="stats-card">
-                <h3>Employee Performance</h3>
+                <h3>Failure Rate by Employee</h3>
                 <div id="employee-stats">
                     <!-- Filled by JS -->
                 </div>
@@ -713,7 +699,6 @@
             currentEmployee: null,        // Current employee being shown
             totalAttempts: 0,            // Total questions asked
             correct: 0,                  // Correct answers on first attempt
-            totalPoints: 0,
             results: [],
             answered: false
         };
@@ -912,7 +897,6 @@
                 currentEmployee: null,
                 totalAttempts: 0,
                 correct: 0,
-                totalPoints: 0,
                 results: [],
                 answered: false
             };
@@ -1007,8 +991,7 @@
                 }
             });
 
-            const points = isCorrect ? 10 : 0;
-            recordAnswer(emp, isCorrect, points);
+            recordAnswer(emp, isCorrect);
         }
 
         function submitTyping() {
@@ -1027,20 +1010,11 @@
             const lastName = emp.lastName.toLowerCase();
             const fullName = emp.fullName.toLowerCase();
 
-            let isCorrect = false;
-            let points = 0;
-
-            // Check for matches
-            if (answer === fullName || answer === `${firstName} ${lastName}`) {
-                isCorrect = true;
-                points = 20; // Full points for full name
-            } else if (answer === firstName) {
-                isCorrect = true;
-                points = 10; // Partial points for first name only
-            } else if (answer === lastName) {
-                isCorrect = true;
-                points = 15; // Extra points for last name
-            }
+            // Check for matches (first name, last name, or full name)
+            const isCorrect = answer === fullName ||
+                              answer === `${firstName} ${lastName}` ||
+                              answer === firstName ||
+                              answer === lastName;
 
             // Show feedback with name
             const feedback = document.getElementById('typing-feedback');
@@ -1048,10 +1022,10 @@
             feedback.className = 'typing-feedback ' + (isCorrect ? 'correct' : 'incorrect');
             feedback.textContent = emp.fullName;
 
-            recordAnswer(emp, isCorrect, points);
+            recordAnswer(emp, isCorrect);
         }
 
-        function recordAnswer(emp, isCorrect, points) {
+        function recordAnswer(emp, isCorrect) {
             gameState.totalAttempts++;
 
             // Track correct answers on first attempt only
@@ -1068,11 +1042,9 @@
                 gameState.queue.push(emp);
             }
 
-            gameState.totalPoints += points;
             gameState.results.push({
                 employeeId: emp.id,
                 correct: isCorrect,
-                points: points,
                 firstAttempt: isFirstAttempt
             });
 
@@ -1088,24 +1060,14 @@
             saveData();
 
             // Show result
-            showResult(emp, isCorrect, points);
+            showResult(emp, isCorrect);
         }
 
-        function showResult(emp, isCorrect, points) {
+        function showResult(emp, isCorrect) {
             const resultDiv = document.getElementById('result');
             resultDiv.style.display = 'block';
             resultDiv.className = 'result ' + (isCorrect ? 'correct' : 'incorrect');
-
-            let html = isCorrect ? 'Correct!' : 'Incorrect';
-            if (!isCorrect) {
-                html += `<div class="correct-answer">The correct answer is: ${emp.fullName}</div>`;
-            }
-            if (config.gameType === 'typing' && isCorrect && points > 10) {
-                html += `<div class="points">+${points} points (bonus for full/last name)</div>`;
-            } else if (isCorrect) {
-                html += `<div class="points">+${points} points</div>`;
-            }
-            resultDiv.innerHTML = html;
+            resultDiv.innerHTML = emp.fullName;
 
             // Show continue button (delay focus to prevent Enter key from triggering it)
             document.getElementById('continue-btn').style.display = 'inline-block';
@@ -1124,18 +1086,16 @@
         function endGame() {
             gameState.active = false;
 
-            // Calculate final score (first-attempt accuracy)
+            // Calculate success rate (batch size / attempts)
             const batchSize = gameState.originalBatchIds.size;
-            const score = Math.round((gameState.correct / batchSize) * 100);
+            const successRate = Math.round((batchSize / gameState.totalAttempts) * 100);
 
             // Save game to history
             stats.games.unshift({
                 date: Date.now(),
-                score: score,
-                correct: gameState.correct,
-                total: batchSize,
+                successRate: successRate,
+                batchSize: batchSize,
                 attempts: gameState.totalAttempts,
-                points: gameState.totalPoints,
                 gameType: config.gameType
             });
 
@@ -1150,10 +1110,9 @@
             document.getElementById('game-container').classList.remove('active');
             document.getElementById('batch-complete').classList.add('active');
 
-            document.getElementById('final-score').textContent = score + '%';
+            document.getElementById('final-score').textContent = successRate + '%';
             document.getElementById('final-correct').textContent =
-                `${gameState.correct}/${batchSize} first try`;
-            document.getElementById('final-points').textContent = gameState.totalPoints;
+                `${batchSize} in ${gameState.totalAttempts} attempts`;
         }
 
         // Statistics UI
@@ -1172,7 +1131,8 @@
                 return;
             }
 
-            const avg = Math.round(lastThree.reduce((sum, g) => sum + g.score, 0) / lastThree.length);
+            // Calculate average success rate
+            const avg = Math.round(lastThree.reduce((sum, g) => sum + (g.successRate || g.score || 0), 0) / lastThree.length);
             avgDiv.textContent = avg + '%';
         }
 
@@ -1180,28 +1140,44 @@
             const container = document.getElementById('game-history');
 
             if (stats.games.length === 0) {
-                container.innerHTML = '<div class="no-data">No games played yet</div>';
+                container.innerHTML = '<div class="no-data">No training sessions yet</div>';
                 return;
             }
 
-            container.innerHTML = stats.games.slice(0, 10).map(game => {
-                const date = new Date(game.date);
-                const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                const typeLabel = game.gameType === 'multiple-choice' ? 'MC' : 'Type';
-                const attemptsStr = game.attempts ? ` (${game.attempts} attempts)` : '';
+            container.innerHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date/Time</th>
+                            <th>Success Rate</th>
+                            <th>Batch</th>
+                            <th>Attempts</th>
+                            <th>Mode</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${stats.games.slice(0, 10).map(game => {
+                            const date = new Date(game.date);
+                            const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                            const typeLabel = game.gameType === 'multiple-choice' ? 'MC' : 'Type';
+                            // Support both old format (score) and new format (successRate)
+                            const successRate = game.successRate !== undefined ? game.successRate : (game.score || 0);
+                            const batchSize = game.batchSize !== undefined ? game.batchSize : (game.total || 0);
+                            const attempts = game.attempts || batchSize;
 
-                return `
-                    <div class="game-history-item">
-                        <div class="game-history-date">${dateStr}</div>
-                        <div class="game-history-stats">
-                            <span><strong>${game.score}%</strong></span>
-                            <span>${game.correct}/${game.total} first try${attemptsStr}</span>
-                            <span>${game.points} pts</span>
-                            <span>${typeLabel}</span>
-                        </div>
-                    </div>
-                `;
-            }).join('');
+                            return `
+                                <tr>
+                                    <td>${dateStr}</td>
+                                    <td><strong>${successRate}%</strong></td>
+                                    <td>${batchSize}</td>
+                                    <td>${attempts}</td>
+                                    <td>${typeLabel}</td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            `;
         }
 
         let employeeSortColumn = 'failRate';
@@ -1227,8 +1203,15 @@
                 };
             });
 
-            // Sort
+            // Sort (keep employees with no data at bottom when sorting by failRate)
             data.sort((a, b) => {
+                // When sorting by failRate, keep no-data employees at the bottom
+                if (employeeSortColumn === 'failRate') {
+                    if (a.total === 0 && b.total === 0) return 0;
+                    if (a.total === 0) return 1;  // a goes to bottom
+                    if (b.total === 0) return -1; // b goes to bottom
+                }
+
                 let valA = a[employeeSortColumn];
                 let valB = b[employeeSortColumn];
 
