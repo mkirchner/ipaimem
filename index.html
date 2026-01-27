@@ -587,6 +587,19 @@
                         </select>
                     </div>
                 </div>
+
+                <div class="config-item">
+                    <div class="config-details">
+                        <h3>Your Name</h3>
+                        <p>
+                            Add your name so future versions can personalize greetings and learning experiences.
+                            This stays on your device only.
+                        </p>
+                    </div>
+                    <div class="config-control">
+                        <input type="text" id="user-name" placeholder="Enter your name" maxlength="60">
+                    </div>
+                </div>
             </div>
 
             <button class="btn" onclick="saveConfig()">Save Configuration</button>
@@ -769,7 +782,8 @@
         // State
         let config = {
             batchSize: 20,
-            gameType: 'multiple-choice'
+            gameType: 'multiple-choice',
+            userName: ''
         };
 
         let gameState = {
@@ -850,6 +864,7 @@
         function updateConfigUI() {
             document.getElementById('batch-size').value = config.batchSize;
             document.getElementById('game-type').value = config.gameType;
+            document.getElementById('user-name').value = config.userName || '';
             updateCurrentConfigDisplay();
         }
 
@@ -868,6 +883,10 @@
                     <span>Game Type:</span>
                     <span><strong>${gameTypeLabel}</strong></span>
                 </div>
+                <div class="config-row">
+                    <span>Your Name:</span>
+                    <span><strong>${config.userName || '—'}</strong></span>
+                </div>
             `;
         }
 
@@ -875,6 +894,7 @@
         function saveConfig() {
             config.batchSize = Math.min(70, Math.max(5, parseInt(document.getElementById('batch-size').value) || 20));
             config.gameType = document.getElementById('game-type').value;
+            config.userName = document.getElementById('user-name').value.trim();
             saveData();
             updateConfigUI();
             alert('Configuration saved!');
@@ -886,7 +906,7 @@
                 deleteCookie('ipai_config');
                 deleteCookie('ipai_stats');
                 stats = { games: [], employeeStats: {} };
-                config = { batchSize: 20, gameType: 'multiple-choice' };
+                config = { batchSize: 20, gameType: 'multiple-choice', userName: '' };
                 loadData();
                 updateStatsUI();
                 alert('All data has been reset.');
