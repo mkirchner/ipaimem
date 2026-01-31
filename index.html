@@ -1107,6 +1107,7 @@
             const parser = new DOMParser();
             const doc = parser.parseFromString(html, 'text/html');
             const employees = [];
+            const seenNames = new Set(); // Track seen names to avoid duplicates
 
             // Find all employee grid items - they contain h4 for name and img for photo
             const gridItems = doc.querySelectorAll('.w-grid-item');
@@ -1118,6 +1119,9 @@
 
                 const fullName = nameEl.textContent.trim();
                 if (!fullName) return;
+
+                // Skip duplicates (page has multiple layouts with same data)
+                if (seenNames.has(fullName)) return;
 
                 // Get the image - look for the actual image (not SVG placeholder)
                 const images = item.querySelectorAll('img');
@@ -1142,6 +1146,7 @@
                 const lastName = nameParts.slice(1).join(' ');
 
                 if (firstName && lastName) {
+                    seenNames.add(fullName);
                     employees.push({
                         firstName,
                         lastName,
