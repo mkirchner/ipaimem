@@ -586,6 +586,80 @@
             background-color: #b33a3a;
         }
 
+        /* Employee Loading Status */
+        .employee-status {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .employee-status.loading {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        .employee-status.success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .employee-status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .employee-status .status-icon {
+            font-size: 18px;
+        }
+
+        .employee-status .status-text {
+            flex: 1;
+        }
+
+        .employee-status .status-details {
+            font-size: 12px;
+            margin-top: 4px;
+            opacity: 0.8;
+        }
+
+        .spinner {
+            width: 18px;
+            height: 18px;
+            border: 2px solid #856404;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .btn-reload {
+            background-color: #17a2b8;
+        }
+
+        .btn-reload:hover {
+            background-color: #138496;
+        }
+
+        .error-details {
+            background-color: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            margin-top: 10px;
+            font-size: 12px;
+            font-family: 'JetBrains Mono', monospace;
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
         /* Table wrapper for responsive scrolling */
         .table-wrapper {
             overflow-x: auto;
@@ -822,6 +896,14 @@
         <div id="config-section" class="section">
             <h2>Configuration</h2>
 
+            <!-- Employee Data Status -->
+            <div id="employee-status" class="employee-status loading">
+                <div class="spinner"></div>
+                <div class="status-text">
+                    <div>Loading employee data...</div>
+                </div>
+            </div>
+
             <div class="config-options">
                 <div class="config-item">
                     <div class="config-details">
@@ -829,11 +911,11 @@
                         <p>
                             Choose how many employees are included in each training batch. Larger batches cover
                             more people in one session, while smaller batches let you focus on a tighter set
-                            before moving on. The maximum is 70, and the minimum is 5.
+                            before moving on. The minimum is 5.
                         </p>
                     </div>
                     <div class="config-control">
-                        <input type="number" id="batch-size" min="5" max="70" value="20">
+                        <input type="number" id="batch-size" min="5" max="100" value="20">
                     </div>
                 </div>
 
@@ -865,6 +947,19 @@
                     </div>
                     <div class="config-control">
                         <input type="text" id="user-name" placeholder="Enter your name" maxlength="60">
+                    </div>
+                </div>
+
+                <div class="config-item">
+                    <div class="config-details">
+                        <h3>Employee Data</h3>
+                        <p>
+                            Employee data is loaded from ip.ai/ueber-uns. If employees have
+                            joined or left, reload to get the latest list.
+                        </p>
+                    </div>
+                    <div class="config-control">
+                        <button class="btn btn-reload" id="reload-employees-btn" onclick="reloadEmployees()">Reload Employee List</button>
                     </div>
                 </div>
             </div>
@@ -997,85 +1092,242 @@
     </div>
 
     <script>
-        // Employee Data
-        const EMPLOYEES = [
-            { firstName: "Tim", lastName: "Do Khac", image: "https://ip.ai/wp-content/uploads/2024/04/Tim-D-K_1x1-scaled.jpg" },
-            { firstName: "Niklas", lastName: "Kiefl", image: "https://ip.ai/wp-content/uploads/2024/08/Niklas_1x1-scaled.jpg" },
-            { firstName: "Tanja", lastName: "Palalic", image: "https://ip.ai/wp-content/uploads/2025/02/1x1_Tanja.png" },
-            { firstName: "Sirid", lastName: "Bohm", image: "https://ip.ai/wp-content/uploads/2025/11/Sirid_1.jpeg" },
-            { firstName: "Jan", lastName: "Denia", image: "https://ip.ai/wp-content/uploads/2023/05/Jan_1x1-scaled.jpg" },
-            { firstName: "Luca", lastName: "Baumlisberger", image: "https://ip.ai/wp-content/uploads/2025/04/1x1_Luca-B.png" },
-            { firstName: "Florian", lastName: "Beier", image: "https://ip.ai/wp-content/uploads/2025/02/1x1_Florian.png" },
-            { firstName: "Natascha", lastName: "Kirschner", image: "https://ip.ai/wp-content/uploads/2025/02/1x1_Natascha.png" },
-            { firstName: "Jaana", lastName: "Muller-Brehm", image: "https://ip.ai/wp-content/uploads/2025/04/1x1_Jaana.png" },
-            { firstName: "Janina", lastName: "Zeller", image: "https://ip.ai/wp-content/uploads/2025/05/1x1_Janina.png" },
-            { firstName: "Linda", lastName: "Kruger", image: "https://ip.ai/wp-content/uploads/2025/07/DSC02887.jpg" },
-            { firstName: "Alexander", lastName: "Stein", image: "https://ip.ai/wp-content/uploads/2024/02/Alex_1x1-scaled.jpg" },
-            { firstName: "Jella", lastName: "Hauptmann", image: "https://ip.ai/wp-content/uploads/2023/05/Jella_1x1-scaled.jpg" },
-            { firstName: "Olga", lastName: "Willmann", image: "https://ip.ai/wp-content/uploads/2025/02/Olga_1x1-2-scaled.jpg" },
-            { firstName: "Nikola", lastName: "Cabarkapa", image: "https://ip.ai/wp-content/uploads/2023/09/Nikola_1x1-1-scaled.jpg" },
-            { firstName: "Oliver", lastName: "Schmidt", image: "https://ip.ai/wp-content/uploads/2023/09/Olli_1x1-scaled.jpg" },
-            { firstName: "Michael", lastName: "Beuttenmuller", image: "https://ip.ai/wp-content/uploads/2025/10/Michael_1.jpeg" },
-            { firstName: "Tatjana", lastName: "Mende", image: "https://ip.ai/wp-content/uploads/2025/05/1x1_Tatjana.png" },
-            { firstName: "Max", lastName: "Brummer", image: "https://ip.ai/wp-content/uploads/2023/05/Max_1x1-scaled.jpg" },
-            { firstName: "Nadine", lastName: "Kern", image: "https://ip.ai/wp-content/uploads/2023/12/Nadine_1x1-scaled.jpg" },
-            { firstName: "Svenja", lastName: "Enchelmaier", image: "https://ip.ai/wp-content/uploads/2025/06/Svenja_3_web-1.jpg" },
-            { firstName: "Janina", lastName: "Schafer", image: "https://ip.ai/wp-content/uploads/2023/05/Janina_1x1-scaled.jpg" },
-            { firstName: "Lena", lastName: "Ertel", image: "https://ip.ai/wp-content/uploads/2025/02/Lena_1x1-scaled.jpg" },
-            { firstName: "Walter", lastName: "Schmidt", image: "https://ip.ai/wp-content/uploads/2024/05/Walter_1x1-scaled.jpg" },
-            { firstName: "Jennifer", lastName: "Flansburg", image: "https://ip.ai/wp-content/uploads/2024/05/Jenny-F_1x1-scaled.jpg" },
-            { firstName: "Sofia", lastName: "Willhauk", image: "https://ip.ai/wp-content/uploads/2025/04/1x1_Sofia.png" },
-            { firstName: "Anna", lastName: "Nerobova", image: "https://ip.ai/wp-content/uploads/2024/07/Anna_1x1-scaled.jpg" },
-            { firstName: "Moritz", lastName: "Grater", image: "https://ip.ai/wp-content/uploads/2023/05/Moritz_1x1-scaled.jpg" },
-            { firstName: "Meike", lastName: "Muhlbauer", image: "https://ip.ai/wp-content/uploads/2024/02/Meike_1x1-scaled.jpg" },
-            { firstName: "Mergim", lastName: "Ashani", image: "https://ip.ai/wp-content/uploads/2025/02/Mergim_1x1-scaled.jpg" },
-            { firstName: "Franziska", lastName: "Kirchert", image: "https://ip.ai/wp-content/uploads/2024/04/Franzi-scaled.jpg" },
-            { firstName: "Fabian", lastName: "Grau", image: "https://ip.ai/wp-content/uploads/2025/02/1x1_Fabian.png" },
-            { firstName: "Julian", lastName: "Thoma", image: "https://ip.ai/wp-content/uploads/2025/09/Julian_2-scaled.jpg" },
-            { firstName: "Sandra", lastName: "Bojang", image: "https://ip.ai/wp-content/uploads/2024/04/Sandra_1x1-scaled.jpg" },
-            { firstName: "Isabell", lastName: "Dorr-Nill", image: "https://ip.ai/wp-content/uploads/2025/02/1x1_Isabell.png" },
-            { firstName: "Britta", lastName: "Weddeling", image: "https://ip.ai/wp-content/uploads/2025/02/1x1_Britta.png" },
-            { firstName: "Constanze", lastName: "Zawadzky", image: "https://ip.ai/wp-content/uploads/2023/05/Constanze_1x1-scaled.jpg" },
-            { firstName: "Veronika", lastName: "Prochazka", image: "https://ip.ai/wp-content/uploads/2023/05/Veronika_1x1-scaled.jpg" },
-            { firstName: "Christopher", lastName: "Seid", image: "https://ip.ai/wp-content/uploads/2025/04/1x1_Chris.png" },
-            { firstName: "Jacqueline", lastName: "Roth-Ruoff", image: "https://ip.ai/wp-content/uploads/2025/08/Jacqueline_final-scaled.jpg" },
-            { firstName: "Benjamin", lastName: "Schiller", image: "https://ip.ai/wp-content/uploads/2023/05/Ben_1x1-scaled.jpg" },
-            { firstName: "Amelie", lastName: "Kretz", image: "https://ip.ai/wp-content/uploads/2024/02/Amy_1x1-scaled.jpg" },
-            { firstName: "Patrick", lastName: "Pickhan", image: "https://ip.ai/wp-content/uploads/2025/10/Patrick_1.jpeg" },
-            { firstName: "Berenice", lastName: "Alburg", image: "https://ip.ai/wp-content/uploads/2025/10/Berenice_1-scaled.jpeg" },
-            { firstName: "Tim", lastName: "Schmitt", image: "https://ip.ai/wp-content/uploads/2024/02/Tim-S_1x1-scaled.jpg" },
-            { firstName: "Alexandra", lastName: "von der Decken", image: "https://ip.ai/wp-content/uploads/2025/03/1x1_Alexandra.png" },
-            { firstName: "Claudio", lastName: "Weck", image: "https://ip.ai/wp-content/uploads/2025/02/Claudio_1x1-scaled.jpg" },
-            { firstName: "Fabienne", lastName: "Gysinn", image: "https://ip.ai/wp-content/uploads/2024/07/Fabienne_Gysinn-1.jpg" },
-            { firstName: "Dilara", lastName: "Pamukcuoglu", image: "https://ip.ai/wp-content/uploads/2025/05/1x1_Dilara.png" },
-            { firstName: "Mariane", lastName: "El Ghrayche", image: "https://ip.ai/wp-content/uploads/2025/10/Mariane_4-scaled.jpeg" },
-            { firstName: "Sophia", lastName: "Roeger", image: "https://ip.ai/wp-content/uploads/2023/05/Sophia-R_1x1-scaled.jpg" },
-            { firstName: "Tamara", lastName: "Pyter", image: "https://ip.ai/wp-content/uploads/2025/11/Tamara_3-Kopie-scaled.jpg" },
-            { firstName: "Ahmed", lastName: "Abdelkader Ibrahim", image: "https://ip.ai/wp-content/uploads/2024/02/Ahmed_1x1-scaled.jpg" },
-            { firstName: "Ildiko", lastName: "Maurer", image: "https://ip.ai/wp-content/uploads/2024/02/Ildiko_1x1-scaled.jpg" },
-            { firstName: "Thomas", lastName: "Kreuzer", image: "https://ip.ai/wp-content/uploads/2025/04/1x1_Thomas.png" },
-            { firstName: "Nick", lastName: "Jennes", image: "https://ip.ai/wp-content/uploads/2025/02/1x1_Nick.png" },
-            { firstName: "Joy", lastName: "Lauter", image: "https://ip.ai/wp-content/uploads/2024/07/Joy_1x1-scaled.jpg" },
-            { firstName: "Christian", lastName: "Haug", image: "https://ip.ai/wp-content/uploads/2025/08/Christian_final-scaled.jpg" },
-            { firstName: "Marcel", lastName: "Mehl", image: "https://ip.ai/wp-content/uploads/2023/05/Marcel_1x1-scaled.jpg" },
-            { firstName: "Jana", lastName: "Greiser", image: "https://ip.ai/wp-content/uploads/2025/08/Jana_final-scaled.jpg" },
-            { firstName: "Carolin", lastName: "Spaeth", image: "https://ip.ai/wp-content/uploads/2024/04/Caro-S_1x1-scaled.jpg" },
-            { firstName: "Anita", lastName: "Klingel", image: "https://ip.ai/wp-content/uploads/2025/05/1x1_Anita.png" },
-            { firstName: "Ronja", lastName: "Bartenbach", image: "https://ip.ai/wp-content/uploads/2025/10/Ronja_2.jpg" },
-            { firstName: "Jazmin", lastName: "Toth", image: "https://ip.ai/wp-content/uploads/2025/10/Jazmin_4.jpeg" },
-            { firstName: "Jana", lastName: "Strattner", image: "https://ip.ai/wp-content/uploads/2024/08/Jana_1x1-scaled.jpg" },
-            { firstName: "Kirstin", lastName: "Heinl", image: "https://ip.ai/wp-content/uploads/2025/06/Kirstin_1_web-1-scaled.jpg" },
-            { firstName: "Sophia", lastName: "Boger", image: "https://ip.ai/wp-content/uploads/2023/12/Sophia-B_1x1-scaled.jpg" },
-            { firstName: "Carolin", lastName: "Rehder", image: "https://ip.ai/wp-content/uploads/2024/02/Caro_R2.jpg" },
-            { firstName: "Tim", lastName: "Roder", image: "https://ip.ai/wp-content/uploads/2024/02/Tim-R_1x1-scaled.jpg" },
-            { firstName: "Janina", lastName: "Schmitz", image: "https://ip.ai/wp-content/uploads/2025/07/Janina-Schmitz_1.jpg" }
+        // Employee Data - loaded dynamically from ip.ai/ueber-uns
+        let EMPLOYEES = [];
+        let employeeLoadError = null;
+        const EMPLOYEE_SOURCE_URL = 'https://ip.ai/ueber-uns/';
+        // CORS proxy to bypass cross-origin restrictions (ip.ai doesn't send CORS headers)
+        const CORS_PROXIES = [
+            (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+            (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
         ];
 
-        // Add unique IDs to employees
-        EMPLOYEES.forEach((emp, idx) => {
-            emp.id = idx;
-            emp.fullName = `${emp.firstName} ${emp.lastName}`;
-        });
+        // Parse employee data from the ip.ai/ueber-uns page HTML
+        function parseEmployeesFromHtml(html) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const employees = [];
+            const seenNames = new Set(); // Track seen names to avoid duplicates
+
+            // Find all employee grid items - they contain h4 for name and img for photo
+            const gridItems = doc.querySelectorAll('.w-grid-item');
+
+            gridItems.forEach(item => {
+                // Get the name from h4 element
+                const nameEl = item.querySelector('h4');
+                if (!nameEl) return;
+
+                const fullName = nameEl.textContent.trim();
+                if (!fullName) return;
+
+                // Skip duplicates (page has multiple layouts with same data)
+                if (seenNames.has(fullName)) return;
+
+                // Get the image - look for the actual image (not SVG placeholder)
+                const images = item.querySelectorAll('img');
+                let imageUrl = null;
+
+                for (const img of images) {
+                    const src = img.getAttribute('src') || '';
+                    // Skip SVG placeholders
+                    if (src.startsWith('data:image/svg')) continue;
+                    // Look for wp-content uploads
+                    if (src.includes('wp-content/uploads')) {
+                        imageUrl = src;
+                        break;
+                    }
+                }
+
+                if (!imageUrl) return;
+
+                // Split name into first and last name
+                const nameParts = fullName.split(' ');
+                const firstName = nameParts[0];
+                const lastName = nameParts.slice(1).join(' ');
+
+                if (firstName && lastName) {
+                    seenNames.add(fullName);
+                    employees.push({
+                        firstName,
+                        lastName,
+                        image: imageUrl
+                    });
+                }
+            });
+
+            return employees;
+        }
+
+        // Fetch and parse employee data from the website
+        async function fetchEmployees() {
+            let lastError = null;
+
+            // Try each CORS proxy in order
+            for (const proxyFn of CORS_PROXIES) {
+                const proxyUrl = proxyFn(EMPLOYEE_SOURCE_URL);
+                try {
+                    const response = await fetch(proxyUrl);
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    const html = await response.text();
+                    const employees = parseEmployeesFromHtml(html);
+
+                    if (employees.length === 0) {
+                        throw new Error('No employees found in the page. The page structure may have changed.');
+                    }
+
+                    return employees;
+                } catch (error) {
+                    lastError = error;
+                    console.warn(`CORS proxy failed: ${proxyUrl}`, error);
+                    // Continue to next proxy
+                }
+            }
+
+            // All proxies failed
+            throw lastError || new Error('All CORS proxies failed');
+        }
+
+        // Load employees and update the app
+        async function loadEmployees() {
+            updateEmployeeStatus('loading', 'Loading employee data from ip.ai...');
+
+            try {
+                const employees = await fetchEmployees();
+
+                // Add unique IDs and full names
+                employees.forEach((emp, idx) => {
+                    emp.id = idx;
+                    emp.fullName = `${emp.firstName} ${emp.lastName}`;
+                });
+
+                EMPLOYEES = employees;
+                employeeLoadError = null;
+
+                updateEmployeeStatus('success', `Loaded ${EMPLOYEES.length} employees from ip.ai`);
+
+                // Re-initialize stats for new employees
+                initializeEmployeeStats();
+
+                return true;
+            } catch (error) {
+                employeeLoadError = error;
+                const errorMessage = error.message || 'Unknown error';
+                updateEmployeeStatus('error', `Failed to load employees: ${errorMessage}`, error);
+                return false;
+            }
+        }
+
+        // Reload employees (called from UI button)
+        async function reloadEmployees() {
+            const btn = document.getElementById('reload-employees-btn');
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = 'Reloading...';
+            }
+
+            const success = await loadEmployees();
+
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = 'Reload Employee List';
+            }
+
+            if (success) {
+                // Update the batch size max to reflect new employee count
+                const batchInput = document.getElementById('batch-size');
+                if (batchInput) {
+                    batchInput.max = EMPLOYEES.length;
+                }
+                // Update stats UI if visible
+                updateStatsUI();
+            }
+        }
+
+        // Update the employee status display
+        function updateEmployeeStatus(status, message, error = null) {
+            const statusEl = document.getElementById('employee-status');
+            if (!statusEl) return;
+
+            statusEl.className = `employee-status ${status}`;
+
+            let iconHtml = '';
+            if (status === 'loading') {
+                iconHtml = '<div class="spinner"></div>';
+            } else if (status === 'success') {
+                iconHtml = '<span class="status-icon">&#10003;</span>';
+            } else if (status === 'error') {
+                iconHtml = '<span class="status-icon">&#10007;</span>';
+            }
+
+            let detailsHtml = '';
+            if (error && status === 'error') {
+                const errorDetails = formatErrorDetails(error);
+                detailsHtml = `<div class="error-details">${escapeHtml(errorDetails)}</div>`;
+            }
+
+            statusEl.innerHTML = `
+                ${iconHtml}
+                <div class="status-text">
+                    <div>${escapeHtml(message)}</div>
+                    ${detailsHtml}
+                </div>
+            `;
+        }
+
+        // Format error details for display
+        function formatErrorDetails(error) {
+            let details = [];
+
+            details.push(`Error: ${error.message || 'Unknown error'}`);
+
+            if (error.name && error.name !== 'Error') {
+                details.push(`Type: ${error.name}`);
+            }
+
+            // Add common troubleshooting hints
+            if (error.message && error.message.includes('Failed to fetch')) {
+                details.push('\nPossible causes:');
+                details.push('- Network connection issue');
+                details.push('- CORS proxy services are unavailable');
+                details.push('- ip.ai website is down or unreachable');
+            }
+
+            if (error.message && error.message.includes('HTTP')) {
+                details.push('\nThe server returned an error response.');
+            }
+
+            if (error.message && error.message.includes('CORS')) {
+                details.push('\nAll CORS proxy services failed. Try again later.');
+            }
+
+            details.push(`\nSource URL: ${EMPLOYEE_SOURCE_URL}`);
+            details.push(`Time: ${new Date().toLocaleString()}`);
+
+            return details.join('\n');
+        }
+
+        // Escape HTML to prevent XSS
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Initialize employee stats for all loaded employees
+        function initializeEmployeeStats() {
+            EMPLOYEES.forEach(emp => {
+                if (!stats.employeeStats[emp.id]) {
+                    stats.employeeStats[emp.id] = {
+                        correct: 0,
+                        incorrect: 0,
+                        lastSeen: null,
+                        lastResult: null
+                    };
+                }
+            });
+        }
 
         // State
         let config = {
@@ -1173,17 +1425,8 @@
                 stats.employeeStats = {};
             }
 
-            // Initialize employee stats for all employees
-            EMPLOYEES.forEach(emp => {
-                if (!stats.employeeStats[emp.id]) {
-                    stats.employeeStats[emp.id] = {
-                        correct: 0,
-                        incorrect: 0,
-                        lastSeen: null,
-                        lastResult: null
-                    };
-                }
-            });
+            // Initialize employee stats (if employees are already loaded)
+            initializeEmployeeStats();
 
             updateConfigUI();
             updateUserNameUI();
@@ -1241,7 +1484,8 @@
 
         // Save configuration
         function saveConfig() {
-            config.batchSize = Math.min(70, Math.max(5, parseInt(document.getElementById('batch-size').value) || 20));
+            const maxBatch = EMPLOYEES.length > 0 ? EMPLOYEES.length : 70;
+            config.batchSize = Math.min(maxBatch, Math.max(5, parseInt(document.getElementById('batch-size').value) || 20));
             config.gameType = document.getElementById('game-type').value;
             config.userName = document.getElementById('user-name').value.trim();
             saveData();
@@ -1392,6 +1636,16 @@
 
         // Game Logic
         function startGame(mode) {
+            // Check if employees are loaded
+            if (EMPLOYEES.length === 0) {
+                if (employeeLoadError) {
+                    alert('Cannot start game: Employee data failed to load. Please check the Configuration section for details and try reloading.');
+                } else {
+                    alert('Please wait for employee data to finish loading.');
+                }
+                return;
+            }
+
             const isTest = mode === 'test';
             statsBeforeGame = isTest ? null : JSON.parse(JSON.stringify(stats));
             const batch = isTest ? shuffleArray([...EMPLOYEES]) : selectBatch(config.batchSize);
@@ -2135,7 +2389,19 @@
         });
 
         // Initialize
-        loadData();
+        async function initialize() {
+            // Load employees first, then load user data
+            await loadEmployees();
+            loadData();
+
+            // Update batch size max based on loaded employees
+            const batchInput = document.getElementById('batch-size');
+            if (batchInput && EMPLOYEES.length > 0) {
+                batchInput.max = EMPLOYEES.length;
+            }
+        }
+
+        initialize();
     </script>
     <!-- simpleanalytics.com (privacy-first, EU-hosted analytics) -->
     <script async src="https://scripts.simpleanalyticscdn.com/latest.js"></script>
