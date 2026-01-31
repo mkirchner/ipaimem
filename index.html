@@ -1095,7 +1095,12 @@
         // Employee Data - loaded dynamically from ip.ai/ueber-uns
         let EMPLOYEES = [];
         let employeeLoadError = null;
-        const EMPLOYEE_SOURCE_URL = 'https://ip.ai/ueber-uns';
+        const EMPLOYEE_SOURCE_URL = 'https://ip.ai/ueber-uns/';
+        // CORS proxy to bypass cross-origin restrictions (ip.ai doesn't send CORS headers)
+        const CORS_PROXIES = [
+            (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+            (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+        ];
 
         // Parse employee data from the ip.ai/ueber-uns page HTML
         function parseEmployeesFromHtml(html) {
@@ -1150,18 +1155,33 @@
 
         // Fetch and parse employee data from the website
         async function fetchEmployees() {
-            const response = await fetch(EMPLOYEE_SOURCE_URL);
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            const html = await response.text();
-            const employees = parseEmployeesFromHtml(html);
+            let lastError = null;
 
-            if (employees.length === 0) {
-                throw new Error('No employees found in the page. The page structure may have changed.');
+            // Try each CORS proxy in order
+            for (const proxyFn of CORS_PROXIES) {
+                const proxyUrl = proxyFn(EMPLOYEE_SOURCE_URL);
+                try {
+                    const response = await fetch(proxyUrl);
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    const html = await response.text();
+                    const employees = parseEmployeesFromHtml(html);
+
+                    if (employees.length === 0) {
+                        throw new Error('No employees found in the page. The page structure may have changed.');
+                    }
+
+                    return employees;
+                } catch (error) {
+                    lastError = error;
+                    console.warn(`CORS proxy failed: ${proxyUrl}`, error);
+                    // Continue to next proxy
+                }
             }
 
-            return employees;
+            // All proxies failed
+            throw lastError || new Error('All CORS proxies failed');
         }
 
         // Load employees and update the app
@@ -1265,12 +1285,16 @@
             if (error.message && error.message.includes('Failed to fetch')) {
                 details.push('\nPossible causes:');
                 details.push('- Network connection issue');
-                details.push('- CORS policy blocking the request');
+                details.push('- CORS proxy services are unavailable');
                 details.push('- ip.ai website is down or unreachable');
             }
 
             if (error.message && error.message.includes('HTTP')) {
                 details.push('\nThe server returned an error response.');
+            }
+
+            if (error.message && error.message.includes('CORS')) {
+                details.push('\nAll CORS proxy services failed. Try again later.');
             }
 
             details.push(`\nSource URL: ${EMPLOYEE_SOURCE_URL}`);
